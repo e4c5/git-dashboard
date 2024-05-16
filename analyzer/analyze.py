@@ -33,5 +33,5 @@ def count_lines_by_author(repo, branch='master'):
 
 
 print(count_lines_by_author(
-    open_repo('/home/raditha/workspaces/python/liquibase/selenium/repos/EMPI/csi-empi-api/'))       
+    open_repo('/home/raditha/workspace/python/CSI/selenium/repos/EMPI/csi-empi-api/'))       
 )

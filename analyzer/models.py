@@ -5,7 +5,9 @@ class Project(models.Model):
     name = models.CharField(max_length=100)
 
 class Author(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=100, unique=True)
+
 class Repository(models.Model):
     name = models.CharField(max_length=100, unique=True)
     last_fetch = models.DateTimeField(auto_now_add=True)
