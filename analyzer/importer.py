@@ -17,8 +17,9 @@ def get_commits(repo, timestamp=None):
             commit_hash = commit.hexsha
             commit_timestamp = commit.committed_datetime
 
-            # Print or store these details
-            print(f'Author: {author}, Commit Hash: {commit_hash}, Timestamp: {commit_timestamp}')
+            yield {"author": author, "commit_hash": commit_hash, "commit_timestamp": commit_timestamp,
+                    "message": commit.message
+                }
 
 def count_lines_by_author(repo, branch='master'):
     lines_by_author = {}
@@ -32,6 +33,7 @@ def count_lines_by_author(repo, branch='master'):
     return lines_by_author
 
 
-print(count_lines_by_author(
-    open_repo('/home/raditha/workspace/python/CSI/selenium/repos/EMPI/csi-empi-api/'))       
-)
+if __name__ == '__main__':
+    print(count_lines_by_author(
+        open_repo('/home/raditha/workspace/python/CSI/selenium/repos/EMPI/csi-empi-api/'))       
+    )

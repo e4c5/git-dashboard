@@ -24,4 +24,8 @@ class Commit(models.Model):
 class Lines(models.Model):
     author = models.ForeignKey('Author', on_delete=models.PROTECT)
     count = models.IntegerField()
-    respository = models.ForeignKey(Repository, on_delete=models.PROTECT)
+    repository = models.ForeignKey(Repository, on_delete=models.PROTECT)
+
+    class Meta:
+        unique_together = ('author', 'repository')
+        
