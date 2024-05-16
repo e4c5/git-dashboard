@@ -12,14 +12,7 @@ def get_commits(repo, timestamp=None):
     for commit in repo.iter_commits('HEAD', max_count=100000):
         # Check if a timestamp was provided and if the commit is newer than this timestamp
         if timestamp is None or commit.committed_datetime > datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S'):
-            # Extract details
-            author = commit.author.name
-            commit_hash = commit.hexsha
-            commit_timestamp = commit.committed_datetime
-
-            yield {"author": author, "commit_hash": commit_hash, "commit_timestamp": commit_timestamp,
-                    "message": commit.message
-                }
+            yield commit
 
 def count_lines_by_author(repo, branch='master'):
     lines_by_author = {}

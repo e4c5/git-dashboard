@@ -9,7 +9,7 @@ from git import Repo
 from django.core.management.base import BaseCommand     
 from django.utils.text import slugify
 from analyzer.importer import open_repo, get_commits, count_lines_by_author
-from analyzer.models import Author, Repository, Commit, Lines, Project
+from analyzer.models import Author, Repository, Commit, Contrib, Project
 
 
 
@@ -28,8 +28,7 @@ class Command(BaseCommand):
             print('Repository not found')
             return
 
-        commits = get_commits(repo, timestamp)
-
+        
         parent_folder_name = os.path.basename(os.path.dirname(repo_path))
         project, _ = Project.objects.get_or_create(name=parent_folder_name)
 
@@ -38,24 +37,24 @@ class Command(BaseCommand):
             defaults = {'name': repo_path.split('/')[-1], 'url': repo_path, 'project': project},
         )
             
-        for commit in commits:
-            author, _ = Author.objects.get_or_create(slug=slugify(commit['author']),
-                                                     defaults = {'name': commit['author'], 'slug': slugify(commit['author'])})
+        for commit in get_commits(repo, timestamp):
+            author, _ = Author.objects.get_or_create(slug=slugify(commit.author),
+                                                     defaults = {'name': commit.author, 'slug': slugify(commit.author)})
             
             commit, _ = Commit.objects.get_or_create(
-                hash=commit['commit_hash'],
+                hash=commit.hexsha,
                 author=author,
-                timestamp=commit['commit_timestamp'],
+                timestamp=commit.committed_datetime,
                 repository=repository,
-                message=commit['message']
+                message=commit.message
             )
 
         lines_by_author = count_lines_by_author(repo)
         for author, count in lines_by_author.items():
-            author, _ = Author.objects.get_or_create(slug=slugify(commit['author']),
-                                                     defaults = {'name': commit['author'], 'slug': slugify(commit['author'])})
-            Lines.objects.get_or_create(
-                author=author,repo = repository,
+            author, _ = Author.objects.get_or_create(slug=slugify(commit.author),
+                                                     defaults = {'name': commit.author, 'slug': slugify(commit.author)})
+            Contrib.objects.get_or_create(
+                author=author,repository = repository,
                 defaults = {'author': author, 'count': count, 'repository': repository}
             )
 
