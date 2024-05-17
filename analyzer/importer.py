@@ -1,6 +1,6 @@
 from git import Repo
 import os
-from datetime import datetime
+
 
 def open_repo(repo_path):
     if os.path.exists(repo_path):
@@ -11,7 +11,7 @@ def open_repo(repo_path):
 def get_commits(repo, timestamp=None):
     for commit in repo.iter_commits('HEAD', max_count=100000):
         # Check if a timestamp was provided and if the commit is newer than this timestamp
-        if timestamp is None or commit.committed_datetime > datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S'):
+        if timestamp is None or commit.committed_datetime > timestamp:
             yield commit
 
 def count_lines_by_author(repo, branch='master'):
