@@ -8,11 +8,10 @@ from git import Repo
 
 from django.core.management.base import BaseCommand     
 from django.utils.text import slugify
+from django.db import transaction
+
 from analyzer.importer import open_repo, get_commits, count_lines_by_author
 from analyzer.models import Author, Repository, Commit, Contrib, Project
-
-
-
 
 class Command(BaseCommand):
     
@@ -20,6 +19,7 @@ class Command(BaseCommand):
         parser.add_argument('repo_path', type=str)
         parser.add_argument('--timestamp', type=str, required=False)
 
+    @transaction.atomic
     def handle(self, *args, **options):
         repo_path = options['repo_path']
         timestamp = options['timestamp']
@@ -48,14 +48,23 @@ class Command(BaseCommand):
             )
 
         lines_by_author = count_lines_by_author(repo)
+        total = 0
+
         for commiter, count in lines_by_author.items():
             author = Author.get_or_create(commiter)
-            
             Contrib.objects.get_or_create(
                 author=author,repository = repository,
                 defaults = {'author': author, 'count': count, 'repository': repository}
             )
+            total += count
 
+        project.lines += total
+        project.contributors = Contrib.objects.filter(repository__project=project).count()
+        project.save()
+
+        repository.lines = total
+        repository.contributors = Contrib.objects.filter(repository=repository).count()
+        repository.save()
 
         return
 

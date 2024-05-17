@@ -7,6 +7,8 @@ from django.utils.text import slugify
 # Create your models here.
 class Project(models.Model):
     name = models.CharField(max_length=100)
+    lines = models.IntegerField(default=0)
+    contributors = models.IntegerField(default=0)
     def __str__(self):
         return self.name
     
@@ -34,7 +36,9 @@ class Repository(models.Model):
     name = models.CharField(max_length=100, unique=True)
     last_fetch = models.DateTimeField(auto_now_add=True)
     url = models.URLField()
-    project = models.ForeignKey(Project, on_delete=models.PROTECT )
+    project = models.ForeignKey(Project, on_delete=models.PROTECT)
+    lines = models.IntegerField(default=0)
+    contributors = models.IntegerField(default=0)
 
     def __str__(self):
         return self.project.name + '/' + self.name
