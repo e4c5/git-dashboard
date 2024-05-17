@@ -1,13 +1,31 @@
 from django.db import models
+from django.db.models import F
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.utils.text import slugify
 
 # Create your models here.
 class Project(models.Model):
     name = models.CharField(max_length=100)
-
+    def __str__(self):
+        return self.name
+    
 class Author(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100, unique=True)
 
+    def __str__(self):
+        return self.name
+    
+    @classmethod
+    def get_or_create(cls,name):
+        slug = slugify(name.lower().replace('.', ' '))
+        try:
+            return Alias.objects.get(slug=slug).author
+        except Alias.DoesNotExist:
+            author, _ = cls.objects.get_or_create(slug=slug, defaults = {'name': name, 'slug': slug})
+            return author
+    
 class Alias(models.Model):
     author = models.ForeignKey('Author', on_delete=models.PROTECT)
     slug = models.SlugField(max_length=100, unique=True)
@@ -17,6 +35,9 @@ class Repository(models.Model):
     last_fetch = models.DateTimeField(auto_now_add=True)
     url = models.URLField()
     project = models.ForeignKey(Project, on_delete=models.PROTECT )
+
+    def __str__(self):
+        return self.project.name + '/' + self.name
 
 class Commit(models.Model):
     hash = models.CharField(max_length=40, unique=True)
@@ -32,17 +53,12 @@ class Contrib(models.Model):
 
     class Meta:
         unique_together = ('author', 'repository')
-        
-
-# signal handler for Alias post save that will update the Repository, Commit and Contrib tables
-# so that the author field is updated with the new alias
-#
-from django.db.models.signals import post_save
-from django.dispatch import receiver
+       
 
 @receiver(post_save, sender=Alias)
 def update_alias(sender, instance, **kwargs):
-    
-    Commit.objects.filter(author__slug=instance.slug).update(author=instance.author)
-    Contrib.objects.filter(author__slug=instance.slug).update(author=instance.author)
+    Contrib.objects.filter(author__slug=instance.slug).delete()
+    Commit.objects.filter(author__slug=instance.slug).delete()
     Author.objects.filter(slug=instance.slug).delete()
+            
+    

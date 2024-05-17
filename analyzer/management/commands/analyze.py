@@ -28,18 +28,16 @@ class Command(BaseCommand):
             print('Repository not found')
             return
 
-        
-        parent_folder_name = os.path.basename(os.path.dirname(repo_path))
-        project, _ = Project.objects.get_or_create(name=parent_folder_name)
+        project = self.get_project(repo_path)
+        repo_name = os.path.basename(os.path.normpath(repo_path))
 
         repository, _ = Repository.objects.get_or_create(
             name=repo_path.split('/')[-1],
-            defaults = {'name': repo_path.split('/')[-1], 'url': repo_path, 'project': project},
+            defaults = {'name': repo_name, 'url': repo_path, 'project': project},
         )
             
         for commit in get_commits(repo, timestamp):
-            author, _ = Author.objects.get_or_create(slug=slugify(commit.author),
-                                                     defaults = {'name': commit.author, 'slug': slugify(commit.author)})
+            author = Author.get_or_create(commit.author.name)
             
             commit, _ = Commit.objects.get_or_create(
                 hash=commit.hexsha,
@@ -50,9 +48,9 @@ class Command(BaseCommand):
             )
 
         lines_by_author = count_lines_by_author(repo)
-        for author, count in lines_by_author.items():
-            author, _ = Author.objects.get_or_create(slug=slugify(commit.author),
-                                                     defaults = {'name': commit.author, 'slug': slugify(commit.author)})
+        for commiter, count in lines_by_author.items():
+            author = Author.get_or_create(commiter)
+            
             Contrib.objects.get_or_create(
                 author=author,repository = repository,
                 defaults = {'author': author, 'count': count, 'repository': repository}
@@ -60,3 +58,16 @@ class Command(BaseCommand):
 
 
         return
+
+    def get_project(self, repo_path):
+        path = os.path.normpath(repo_path)
+        components = path.split(os.sep)
+        
+
+        if len(components) > 1:
+            name =  components[-2]
+        else:
+            return None
+        
+        project, _ = Project.objects.get_or_create(name=name)
+        return project
