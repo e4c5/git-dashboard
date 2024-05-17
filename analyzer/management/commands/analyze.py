@@ -10,7 +10,7 @@ from django.core.management.base import BaseCommand
 from django.utils.text import slugify
 from django.db import transaction
 
-from analyzer.importer import open_repo, get_commits, count_lines_by_author
+from analyzer.importer import open_repo, get_commits, count_lines_by_author,get_last_modified_time
 from analyzer.models import Author, Repository, Commit, Contrib, Project
 
 class Command(BaseCommand):
@@ -26,10 +26,11 @@ class Command(BaseCommand):
         all = options['all']
         if all:
             for project in os.listdir(repo_path):
-                if os.path.isdir(os.path.join(repo_path, project, '.git')):
-                    self.import_repo(repo_path, timestamp)
-                else:   
-                    self.recurse(os.path.join(repo_path, project), timestamp)
+                if os.path.isdir(os.path.join(repo_path, project)) and not project.startswith('.'):
+                    if os.path.isdir(os.path.join(repo_path, project, '.git')):
+                        self.import_repo(repo_path, timestamp)
+                    else:   
+                        self.recurse(os.path.join(repo_path, project), timestamp)
         else:
             self.import_repo(repo_path, timestamp)
 
@@ -57,18 +58,23 @@ class Command(BaseCommand):
 
         if timestamp is None:
             timestamp = repository.last_fetch
-
         else:                        
             timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+
+        if timestamp:
+            if timestamp >= get_last_modified_time(repo_path):
+                print('No new commits')
+                return
+            
         for commit in get_commits(repo, timestamp):
             author = Author.get_or_create(commit.author.name)
-            
+            if timestamp is None or commit.committed_datetime > timestamp:
+                timestamp = commit.committed_datetime
+
             commit, _ = Commit.objects.get_or_create(
                 hash=commit.hexsha,
-                author=author,
-                timestamp=commit.committed_datetime,
-                repository=repository,
-                message=commit.message
+                defaults = {'hash': commit.hexsha, 'author': author, 'timestamp': 
+                            commit.committed_datetime, 'repository': repository, 'message': commit.message}
             )
 
         lines_by_author = count_lines_by_author(repo)
@@ -84,10 +90,13 @@ class Command(BaseCommand):
 
         project.lines += total
         project.contributors = Contrib.objects.filter(repository__project=project).count()
+        if project.last_fetch is None or project.last_fetch < timestamp:
+            project.last_fetch = timestamp
         project.save()
 
         repository.lines = total
         repository.contributors = Contrib.objects.filter(repository=repository).count()
+        repository.last_fetch = timestamp
         repository.save()
 
         return
