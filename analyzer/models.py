@@ -9,6 +9,7 @@ class Project(models.Model):
     name = models.CharField(max_length=100)
     lines = models.IntegerField(default=0)
     contributors = models.IntegerField(default=0)
+    last_fetch = models.DateTimeField(null=True, blank=True)
     def __str__(self):
         return self.name
     
@@ -34,7 +35,7 @@ class Alias(models.Model):
 
 class Repository(models.Model):
     name = models.CharField(max_length=100, unique=True)
-    last_fetch = models.DateTimeField(auto_now_add=True)
+    last_fetch = models.DateTimeField(null=True, blank=True)
     url = models.URLField()
     project = models.ForeignKey(Project, on_delete=models.PROTECT)
     lines = models.IntegerField(default=0)

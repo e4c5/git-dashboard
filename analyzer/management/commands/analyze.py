@@ -16,13 +16,32 @@ from analyzer.models import Author, Repository, Commit, Contrib, Project
 class Command(BaseCommand):
     
     def add_arguments(self, parser):
-        parser.add_argument('repo_path', type=str)
+        parser.add_argument('location', type=str)
         parser.add_argument('--timestamp', type=str, required=False)
+        parser.add_argument('--all', action='store_true', help='An optional all argument')
+    
+    def handle(self, *args, **options):
+        repo_path = options['location']
+        timestamp = options['timestamp']
+        all = options['all']
+        if all:
+            for project in os.listdir(repo_path):
+                if os.path.isdir(os.path.join(repo_path, project, '.git')):
+                    self.import_repo(repo_path, timestamp)
+                else:   
+                    self.recurse(os.path.join(repo_path, project), timestamp)
+        else:
+            self.import_repo(repo_path, timestamp)
+
+    def recurse(self, repo_path, timestamp):
+        print("Recurse", repo_path)
+        for repo in os.listdir(repo_path):
+            self.import_repo(os.path.join(repo_path, repo), timestamp)
+
 
     @transaction.atomic
-    def handle(self, *args, **options):
-        repo_path = options['repo_path']
-        timestamp = options['timestamp']
+    def import_repo(self, repo_path, timestamp):
+        print(repo_path)
         repo = open_repo(repo_path)
         if repo is None:
             print('Repository not found')
@@ -35,7 +54,12 @@ class Command(BaseCommand):
             name=repo_path.split('/')[-1],
             defaults = {'name': repo_name, 'url': repo_path, 'project': project},
         )
-            
+
+        if timestamp is None:
+            timestamp = repository.last_fetch
+
+        else:                        
+            timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
         for commit in get_commits(repo, timestamp):
             author = Author.get_or_create(commit.author.name)
             
