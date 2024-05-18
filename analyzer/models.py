@@ -10,9 +10,12 @@ class Project(models.Model):
     lines = models.IntegerField(default=0)
     contributors = models.IntegerField(default=0)
     last_fetch = models.DateTimeField(null=True, blank=True)
+    skip = models.BooleanField(default=False)
+
     def __str__(self):
         return self.name
     
+
 class Author(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100, unique=True)
@@ -33,6 +36,7 @@ class Alias(models.Model):
     author = models.ForeignKey('Author', on_delete=models.PROTECT)
     slug = models.SlugField(max_length=100, unique=True)
 
+
 class Repository(models.Model):
     name = models.CharField(max_length=100, unique=True)
     last_fetch = models.DateTimeField(null=True, blank=True)
@@ -40,9 +44,12 @@ class Repository(models.Model):
     project = models.ForeignKey(Project, on_delete=models.PROTECT)
     lines = models.IntegerField(default=0)
     contributors = models.IntegerField(default=0)
+    skip = models.BooleanField(default=False)
+    success = models.BooleanField(default=True)
 
     def __str__(self):
         return self.project.name + '/' + self.name
+
 
 class Commit(models.Model):
     hash = models.CharField(max_length=40, unique=True)
@@ -50,6 +57,7 @@ class Commit(models.Model):
     timestamp = models.DateTimeField()
     repository = models.ForeignKey(Repository, on_delete=models.PROTECT)
     message = models.TextField()
+
 
 class Contrib(models.Model):
     author = models.ForeignKey('Author', on_delete=models.PROTECT)

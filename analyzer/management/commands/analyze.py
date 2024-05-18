@@ -65,7 +65,9 @@ class Command(BaseCommand):
             if timestamp >= get_last_modified_time(repo_path):
                 print('No new commits')
                 return
-            
+            else:
+                print(timestamp, get_last_modified_time(repo_path))
+                
         for commit in get_commits(repo, timestamp):
             author = Author.get_or_create(commit.author.name)
             if timestamp is None or commit.committed_datetime > timestamp:
