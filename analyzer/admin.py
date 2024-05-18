@@ -2,10 +2,15 @@ from django.contrib import admin
 from .models import Project, Repository, Commit, Author, Alias, Contrib
 
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ('name','lines','contributors')
+    list_display = ('name','lines','contributors','skip')
+    list_filter = ('skip',)
+    list_editable = ('skip',)
+
 
 class RepositoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'url', 'project','lines','contributors') 
+    list_display = ('name', 'url', 'project','lines','contributors','skip','success')
+    list_filter = ('project','skip','success')
+    list_editable = ('skip','success') 
 
 class CommitAdmin(admin.ModelAdmin):
     list_display = ('hash', 'author', 'repository', 'timestamp')

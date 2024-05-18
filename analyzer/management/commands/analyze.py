@@ -1,7 +1,11 @@
-#
-# A django management command that will take a repository location as an argument and analyze the repository.
-# the results will be saved using the models defined in models.py
-#
+""""
+A Django management command to analyze git repositories at the given location.
+Repositories can be organized together into projects and by using the -all flag
+it is possible to analyze all repositories recursively.
+
+In case some projects or repositories do not need analysis their skip flag can
+be set to True.
+"""
 import os
 from datetime import datetime
 from git import Repo
@@ -40,7 +44,7 @@ class Command(BaseCommand):
             self.import_repo(os.path.join(repo_path, repo), timestamp)
 
 
-    @transaction.atomic
+    
     def import_repo(self, repo_path, timestamp):
         print(repo_path)
         repo = open_repo(repo_path)
@@ -49,25 +53,54 @@ class Command(BaseCommand):
             return
 
         project = self.get_project(repo_path)
+        if project.skip:
+            return
+        
         repo_name = os.path.basename(os.path.normpath(repo_path))
 
         repository, _ = Repository.objects.get_or_create(
             name=repo_path.split('/')[-1],
             defaults = {'name': repo_name, 'url': repo_path, 'project': project},
         )
+        if repository.skip:
+            return
+        
+        try:
+            if timestamp is None:
+                timestamp = repository.last_fetch
+            else:                        
+                timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
 
-        if timestamp is None:
-            timestamp = repository.last_fetch
-        else:                        
-            timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+            if timestamp:
+                if timestamp >= get_last_modified_time(repo_path):
+                    print('No new commits')
+                    return
+                else:
+                    print(timestamp, get_last_modified_time(repo_path))
 
-        if timestamp:
-            if timestamp >= get_last_modified_time(repo_path):
-                print('No new commits')
-                return
-            else:
-                print(timestamp, get_last_modified_time(repo_path))
-                
+            timestamp = self.log_commits(timestamp, repo, repository)
+            total = self.line_counts(repo, repository)
+
+            project.lines += total
+            project.contributors = Contrib.objects.filter(repository__project=project).count()
+            if project.last_fetch is None or project.last_fetch < timestamp:
+                project.last_fetch = timestamp
+            project.save()
+
+            repository.lines = total
+            repository.contributors = Contrib.objects.filter(repository=repository).count()
+            repository.last_fetch = timestamp
+            repository.save()
+        except Exception as e:
+            print(e)
+            repository.success = False
+            repository.save()
+
+        return
+
+    
+    @transaction.atomic
+    def log_commits(self, timestamp, repo, repository):
         for commit in get_commits(repo, timestamp):
             author = Author.get_or_create(commit.author.name)
             if timestamp is None or commit.committed_datetime > timestamp:
@@ -78,7 +111,11 @@ class Command(BaseCommand):
                 defaults = {'hash': commit.hexsha, 'author': author, 'timestamp': 
                             commit.committed_datetime, 'repository': repository, 'message': commit.message}
             )
+            
+        return timestamp
 
+    @transaction.atomic
+    def line_counts(self, repo, repository):
         lines_by_author = count_lines_by_author(repo)
         total = 0
 
@@ -89,19 +126,7 @@ class Command(BaseCommand):
                 defaults = {'author': author, 'count': count, 'repository': repository}
             )
             total += count
-
-        project.lines += total
-        project.contributors = Contrib.objects.filter(repository__project=project).count()
-        if project.last_fetch is None or project.last_fetch < timestamp:
-            project.last_fetch = timestamp
-        project.save()
-
-        repository.lines = total
-        repository.contributors = Contrib.objects.filter(repository=repository).count()
-        repository.last_fetch = timestamp
-        repository.save()
-
-        return
+        return total
 
     def get_project(self, repo_path):
         path = os.path.normpath(repo_path)
