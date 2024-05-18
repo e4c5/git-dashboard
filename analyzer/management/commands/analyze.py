@@ -94,6 +94,7 @@ class Command(BaseCommand):
             repository.lines = total
             repository.contributors = Contrib.objects.filter(repository=repository).count()
             repository.last_fetch = timestamp
+            repository.success = True
             repository.save()
         except Exception as e:
             print(e)

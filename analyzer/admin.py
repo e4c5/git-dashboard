@@ -1,15 +1,31 @@
 from django.contrib import admin
 from .models import Project, Repository, Commit, Author, Alias, Contrib
+from django import forms
 
 class ProjectAdmin(admin.ModelAdmin):
     list_display = ('name','lines','contributors','skip')
     list_filter = ('skip',)
     list_editable = ('skip',)
 
+class ProjectListFilter(admin.SimpleListFilter):
+    """ Filter repositories by project.
+    Project list is sorted by name. """
+    title = 'project'
+    parameter_name = 'project'
 
+    def lookups(self, request, model_admin):
+        return [(p.name, p.name) for p in Project.objects.order_by('name')]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(project__id=self.value())
+        else:
+            return queryset
+        
 class RepositoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'url', 'project','lines','contributors','skip','success')
-    list_filter = ('project','skip','success')
+
+    list_display = ('name', 'last_fetch', 'project','lines','contributors','skip','success')
+    list_filter = (ProjectListFilter,'skip','success')
     list_editable = ('skip','success') 
 
 class CommitAdmin(admin.ModelAdmin):

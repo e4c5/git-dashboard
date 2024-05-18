@@ -28,7 +28,7 @@ def count_lines_by_author(repo, branch='master'):
 
 def get_last_modified_time(repo_path):
     repo = Repo(repo_path)
-    commits = repo.iter_commits('master', max_count=1)
+    commits = repo.iter_commits(all=True, max_count=1)
     try:
         return next(commits).committed_datetime
     except StopIteration:
