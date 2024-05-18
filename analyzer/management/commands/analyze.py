@@ -1,4 +1,4 @@
-""""
+"""
 A Django management command to analyze git repositories at the given location.
 Repositories can be organized together into projects and by using the -all flag
 it is possible to analyze all repositories recursively.
