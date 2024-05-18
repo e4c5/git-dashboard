@@ -27,8 +27,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         repo_path = options['location']
         timestamp = options['timestamp']
-        all = options['all']
-        if all:
+        
+        if options['all']:
             for project in os.listdir(repo_path):
                 if os.path.isdir(os.path.join(repo_path, project)) and not project.startswith('.'):
                     if os.path.isdir(os.path.join(repo_path, project, '.git')):
@@ -101,26 +101,40 @@ class Command(BaseCommand):
             repository.success = False
             repository.save()
 
-        return
-
     
     @transaction.atomic
     def log_commits(self, timestamp, repo, repository):
-        for commit in get_commits(repo, timestamp):
-            author = Author.get_or_create(commit.author.name)
+        """Log commits to the database.
+        The last 10,000 commits across all branches are processed
+        Args: timestamp: datetime of the last commit previously seen
+                repo: git.Repo object
+                repository: Repository object (database model)
+        Returns: datetime of the last commit processed
+        """
+        for commit in repo.iter_commits(all=True, max_count=100000):
             if timestamp is None or commit.committed_datetime > timestamp:
-                timestamp = commit.committed_datetime
+                author = Author.get_or_create(commit.author.name)
+                if timestamp is None or commit.committed_datetime > timestamp:
+                    timestamp = commit.committed_datetime
 
-            commit, _ = Commit.objects.get_or_create(
-                hash=commit.hexsha,
-                defaults = {'hash': commit.hexsha, 'author': author, 'timestamp': 
-                            commit.committed_datetime, 'repository': repository, 'message': commit.message}
-            )
+                commit, _ = Commit.objects.get_or_create(
+                    hash=commit.hexsha,
+                    defaults = {'hash': commit.hexsha, 'author': author, 'timestamp': 
+                                commit.committed_datetime, 'repository': repository, 'message': commit.message}
+                )
+            else:
+                break
             
         return timestamp
 
     @transaction.atomic
     def line_counts(self, repo, repository):
+        """Count lines of code by author in the given repository
+        
+        Args: repo: git.Repo object
+              repository: Repository object (database model)
+        Returns: total number of lines in the git repository"""
+
         lines_by_author = count_lines_by_author(repo)
         total = 0
 

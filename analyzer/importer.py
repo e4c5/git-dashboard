@@ -8,13 +8,12 @@ def open_repo(repo_path):
         repo = Repo(repo_path)
         return repo
 
-def get_commits(repo, timestamp=None):
-    for commit in repo.iter_commits(all=True, max_count=100000):
-        # Check if a timestamp was provided and if the commit is newer than this timestamp
-        if timestamp is None or commit.committed_datetime > timestamp:
-            yield commit
-
 def count_lines_by_author(repo, branch='master'):
+    """Count lines of code by author in the given repository.
+    Args: repo: git.Repo object
+          branch: branch to analyze
+    Returns: dictionary of author names and line counts"""
+    
     lines_by_author = {}
     for item in repo.tree(branch).traverse():
         if item.type == 'blob':  # A file, not a directory
