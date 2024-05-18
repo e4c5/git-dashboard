@@ -30,3 +30,12 @@ class ContribSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contrib
         fields = '__all__'
+
+class AuthorCommitSerializer(serializers.ModelSerializer):
+    author = AuthorSerializer(read_only=True)
+
+    class Meta:
+        model = Commit
+        fields = ['author', 'total']
+
+    total = serializers.IntegerField()        

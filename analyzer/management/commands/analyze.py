@@ -64,8 +64,12 @@ class Command(BaseCommand):
         )
         if repository.skip:
             return
-        
+
         try:
+            # fetch all the changes from remote to local
+            repo.remotes.origin.fetch()
+            
+
             if timestamp is None:
                 timestamp = repository.last_fetch
             else:                        

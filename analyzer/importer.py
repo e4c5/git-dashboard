@@ -9,7 +9,7 @@ def open_repo(repo_path):
         return repo
 
 def get_commits(repo, timestamp=None):
-    for commit in repo.iter_commits('HEAD', max_count=100000):
+    for commit in repo.iter_commits(all=True, max_count=100000):
         # Check if a timestamp was provided and if the commit is newer than this timestamp
         if timestamp is None or commit.committed_datetime > timestamp:
             yield commit
