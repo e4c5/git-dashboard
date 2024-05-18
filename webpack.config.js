@@ -9,7 +9,7 @@ class HtmlUpdater {
     apply(compiler) {
       compiler.hooks.emit.tapAsync("HtmlUpdater", (compilation, callback) => {
 
-        let html = fs.readFileSync('tournament/templates/index.html','utf-8')
+        let html = fs.readFileSync('analyzer/templates/analyzer/index.html','utf-8')
         const regex = /<script[^>]*src="\/static\/js\/(.*?)"[^>]*>/; // regular expression that matches the src attribute in script tags
         const mode = compiler.options.mode;
 
@@ -30,7 +30,7 @@ class HtmlUpdater {
             }
         });
 
-        fs.writeFileSync('tournament/templates/index.html', html);
+        fs.writeFileSync('analyzer/templates/analyzer/index.html', html);
         callback();
       });
     }
@@ -60,7 +60,7 @@ module.exports = {
 
   output: {
     filename: generateName(),
-    path: path.resolve(__dirname, 'tournament/static/js'),
+    path: path.resolve(__dirname, 'analyzer/static/js'),
   },
   devtool: 'inline-source-map',
   module: {
