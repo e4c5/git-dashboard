@@ -2,11 +2,6 @@ from git import Repo
 import os
 
 
-def open_repo(repo_path):
-    if os.path.exists(repo_path):
-        # Create a Repo object
-        repo = Repo(repo_path)
-        return repo
 
 def count_lines_by_author(repo, branch='master'):
     """Count lines of code by author in the given repository.

@@ -1,7 +1,10 @@
-from rest_framework import viewsets, pagination, decorators, response
+from datetime import timedelta
+
 from django.db.models import Count
 from django.utils import timezone
-from datetime import timedelta
+from django.shortcuts import render
+from rest_framework import viewsets, pagination, decorators, response
+
 from .models import Project, Author, Alias, Repository, Commit, Contrib
 from .serializers import ProjectSerializer, AuthorSerializer, AliasSerializer
 from .serializers import RepositorySerializer, CommitSerializer, ContribSerializer, AuthorCommitSerializer
@@ -52,3 +55,8 @@ class ContribViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Contrib.objects.all()
     serializer_class = ContribSerializer
     pagination_class = CustomCursorPagination
+
+
+def home(request):
+    print('bada')
+    return render(request, 'analyzer/index.html')

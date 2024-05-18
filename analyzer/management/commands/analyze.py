@@ -14,7 +14,7 @@ from django.core.management.base import BaseCommand
 from django.utils.text import slugify
 from django.db import transaction
 
-from analyzer.importer import open_repo, get_commits, count_lines_by_author,get_last_modified_time
+from analyzer.importer import count_lines_by_author,get_last_modified_time
 from analyzer.models import Author, Repository, Commit, Contrib, Project
 
 class Command(BaseCommand):
@@ -47,8 +47,10 @@ class Command(BaseCommand):
     
     def import_repo(self, repo_path, timestamp):
         print(repo_path)
-        repo = open_repo(repo_path)
-        if repo is None:
+        
+        if os.path.exists(repo_path):
+            repo = Repo(repo_path)
+        else:
             print('Repository not found')
             return
 
