@@ -8,7 +8,8 @@ be set to True.
 """
 import os
 from datetime import datetime
-from git import Repo
+from git import GitCommandError, Repo
+from gitdb.exc import BadName
 
 from django.core.management.base import BaseCommand     
 from django.utils.text import slugify
@@ -21,8 +22,9 @@ class Command(BaseCommand):
     
     def add_arguments(self, parser):
         parser.add_argument('location', type=str)
-        parser.add_argument('--timestamp', type=str, required=False)
-        parser.add_argument('--all', action='store_true', help='An optional all argument')
+        parser.add_argument('--timestamp', type=str, required=False, help='Only check for commits that are newer than the given timestamp')
+        parser.add_argument('--all', action='store_true', help='Process all projects and repositories recursively')
+        parser.add_argument('--no-fetch', action='store_true', help='Dont fetch the repository before analyzing it')
     
     def handle(self, *args, **options):
         repo_path = options['location']
@@ -34,18 +36,18 @@ class Command(BaseCommand):
                     if os.path.isdir(os.path.join(repo_path, project, '.git')):
                         self.import_repo(repo_path, timestamp)
                     else:   
-                        self.recurse(os.path.join(repo_path, project), timestamp)
+                        self.recurse(os.path.join(repo_path, project), timestamp, options['no_fetch'])
         else:
-            self.import_repo(repo_path, timestamp)
+            self.import_repo(repo_path, timestamp, options['no_fetch'])
 
-    def recurse(self, repo_path, timestamp):
-        print("Recurse", repo_path)
+
+    def recurse(self, repo_path, timestamp, no_fetch=False):
         for repo in os.listdir(repo_path):
-            self.import_repo(os.path.join(repo_path, repo), timestamp)
+            self.import_repo(os.path.join(repo_path, repo), timestamp, no_fetch)
 
 
     
-    def import_repo(self, repo_path, timestamp):
+    def import_repo(self, repo_path, timestamp, no_fetch=False):
         print(repo_path)
         
         if os.path.exists(repo_path):
@@ -68,8 +70,9 @@ class Command(BaseCommand):
             return
 
         try:
-            # fetch all the changes from remote to local
-            repo.remotes.origin.fetch()
+            if not no_fetch:
+                # fetch all the changes from remote to local
+                repo.remotes.origin.fetch()
             
 
             if timestamp is None:
@@ -77,15 +80,9 @@ class Command(BaseCommand):
             else:                        
                 timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
 
-            if timestamp:
-                if timestamp >= get_last_modified_time(repo_path):
-                    print('No new commits')
-                    return
-                else:
-                    print(timestamp, get_last_modified_time(repo_path))
-
-            timestamp = self.log_commits(timestamp, repo, repository)
+            self.log_commits(timestamp, repo, repository)
             total = self.line_counts(repo, repository)
+            timestamp = get_last_modified_time(repo_path)
 
             project.lines += total
             project.contributors = Contrib.objects.filter(repository__project=project).count()
@@ -98,8 +95,15 @@ class Command(BaseCommand):
             repository.last_fetch = timestamp
             repository.success = True
             repository.save()
+        except (GitCommandError, BadName, ValueError) as ge:
+            print(ge)
+            repository.success = False
+            repository.save()
         except Exception as e:
             print(e)
+            import traceback
+            traceback.print_exc()
+            raise e
             repository.success = False
             repository.save()
 
@@ -113,21 +117,21 @@ class Command(BaseCommand):
                 repository: Repository object (database model)
         Returns: datetime of the last commit processed
         """
+
         for commit in repo.iter_commits(all=True, max_count=100000):
             if timestamp is None or commit.committed_datetime > timestamp:
                 author = Author.get_or_create(commit.author.name)
-                if timestamp is None or commit.committed_datetime > timestamp:
-                    timestamp = commit.committed_datetime
 
                 commit, _ = Commit.objects.get_or_create(
                     hash=commit.hexsha,
-                    defaults = {'hash': commit.hexsha, 'author': author, 'timestamp': 
-                                commit.committed_datetime, 'repository': repository, 'message': commit.message}
+                    defaults = {'hash': commit.hexsha, 'author': author, 
+                                'timestamp': commit.committed_datetime, 
+                                'repository': repository, 'message': commit.message}
                 )
             else:
                 break
             
-        return timestamp
+
 
     @transaction.atomic
     def line_counts(self, repo, repository):

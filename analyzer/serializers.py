@@ -48,3 +48,13 @@ class AuthorCommitSerializer(serializers.ModelSerializer):
         fields = ['author', 'total']
 
     total = serializers.IntegerField()        
+
+
+class ProjectCommitSerializer(serializers.ModelSerializer):
+    project = ProjectSerializer(read_only=True)
+
+    class Meta:
+        model = Commit
+        fields = ['project', 'total']
+
+    total = serializers.IntegerField()

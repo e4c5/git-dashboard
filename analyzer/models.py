@@ -25,7 +25,7 @@ class Author(models.Model):
     
     @classmethod
     def get_or_create(cls,name):
-        slug = slugify(name.lower().replace('.', ' '))
+        slug = slugify(name.strip().lower().replace('.', ' '))
         try:
             return Alias.objects.get(slug=slug).author
         except Alias.DoesNotExist:
