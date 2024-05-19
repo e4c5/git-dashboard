@@ -23,18 +23,23 @@ class ProjectListFilter(admin.SimpleListFilter):
             return queryset
         
 class RepositoryAdmin(admin.ModelAdmin):
-
     list_display = ('name', 'last_fetch', 'project','lines','contributors','skip','success')
     list_filter = (ProjectListFilter,'skip','success')
     list_editable = ('skip','success') 
 
+
 class CommitAdmin(admin.ModelAdmin):
     list_display = ('hash', 'author', 'repository', 'timestamp')
 
+
 class AuthorAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')  
+    search_fields = ('name',)
+
 
 class AliasAdmin(admin.ModelAdmin):
+    raw_id_fields = ('author',)
+    search_fields = ('author__name',)
     list_display = ('slug', 'author') 
 
 class ContribAdmin(admin.ModelAdmin):
