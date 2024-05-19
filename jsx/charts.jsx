@@ -125,7 +125,7 @@ export function Chart() {
             <div className='row mt-5'>
                 <h2>Activity by Project</h2>
             </div>
-            <div className='row mt-5'>
+            <div className='row mt-5 mb-5'>
                 <div id="project_table_div" className='col-6'></div>
                 <div id="project_chart_div" className='col-6'></div>
             </div>
