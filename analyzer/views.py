@@ -6,7 +6,7 @@ from django.shortcuts import render
 from rest_framework import viewsets, pagination, decorators, response
 
 from .models import Project, Author, Alias, Repository, Commit, Contrib
-from .serializers import ProjectSerializer, AuthorSerializer, AliasSerializer
+from .serializers import ProjectSerializer, AuthorSerializer, AliasSerializer, RepositoryCommitSerializer
 from .serializers import RepositorySerializer, CommitSerializer, ContribSerializer, AuthorCommitSerializer
 
 class CustomCursorPagination(pagination.CursorPagination):
@@ -50,6 +50,16 @@ class CommitViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = AuthorCommitSerializer(data, many=True)
         return response.Response(serializer.data)
     
+    @decorators.action(detail=False, methods=['get'])
+    def repository_commits(self, request, *args, **kwargs):
+        days = request.query_params.get('days', 7)
+        since = timezone.now() - timedelta(days=int(days))
+        data = Commit.objects.filter(timestamp__gte=since).values('repository').annotate(total=Count('id')).order_by('-total')
+        repositories = {repository.id: repository for repository in Repository.objects.filter(id__in=[item['repository'] for item in data])}
+        for item in data:
+            item['repository'] = repositories[item['repository']]
+        serializer = RepositoryCommitSerializer(data, many=True)
+        return response.Response(serializer.data)
 
 class ContribViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Contrib.objects.all()

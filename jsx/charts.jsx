@@ -22,24 +22,39 @@ export function Chart() {
                 dataGoogle.addRows(data.map((item) => [item.author.name, item.total]));
         
                 const options = {
-                    title: `Author Commits`,
-                    width: 800,
+                    width: 600,
                     height: 600,
                     pieSliceText: 'value',
-                   sliceVisibilityThreshold: 0.025,
+                    sliceVisibilityThreshold: 0.025,
+                    chartArea: {
+                        left: 100,
+                        top: 75,
+                        width: '100%',
+                        height: '100%'
+                    },
+                    legend: {
+                        alignment: 'center',
+                        position: 'top'
+                    }
                 };
         
                 const chart = new window.google.visualization.PieChart(document.getElementById('chart_div'));
                 chart.draw(dataGoogle, options);
         
                 const table = new window.google.visualization.Table(document.getElementById('table_div'));
-                table.draw(dataGoogle, {showRowNumber: true, width: '100%', height: '250px'});
+                table.draw(dataGoogle, {showRowNumber: true, width: '100%', height: '600px'});
             }
         }
     }, [data]);
 
-    return (<div>
-                <div id="chart_div"></div>
-                <div id="table_div"></div>
-            </div>);
+    return (
+        <>
+            <div className='row'>
+                <h2>Activity by contributor</h2>
+            </div>
+            <div className='row'>
+                <div id="table_div" className='col-6'></div>
+                <div id="chart_div" className='col-6'></div>
+            </div>
+        </>)
 }
