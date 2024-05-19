@@ -19,35 +19,27 @@ export function Chart() {
                 const dataGoogle = new window.google.visualization.DataTable();
                 dataGoogle.addColumn('string', 'Author');
                 dataGoogle.addColumn('number', 'Commits');
-                let others = ["Others", 0];
-                let total = 0;
-
-                for(let i=0; i<data.length; i++) {
-                    total += data[i].total;
-                    if(i < 7) {
-                        dataGoogle.addRow([data[i].author.name, data[i].total]);
-                    }
-                    else {
-                        others[1] += data[i].total;
-                    }
-                }
-                if(others[1] > 0) {
-                    dataGoogle.addRow(others);
-                }
-
+                dataGoogle.addRows(data.map((item) => [item.author.name, item.total]));
+        
                 const options = {
-                    title: `Author Commits (Total ${total})`,
+                    title: `Author Commits`,
                     width: 800,
                     height: 600,
                     pieSliceText: 'value',
-                    tooltip: { trigger: 'selection' }
+                   sliceVisibilityThreshold: 0.025,
                 };
-
+        
                 const chart = new window.google.visualization.PieChart(document.getElementById('chart_div'));
                 chart.draw(dataGoogle, options);
+        
+                const table = new window.google.visualization.Table(document.getElementById('table_div'));
+                table.draw(dataGoogle, {showRowNumber: true, width: '100%', height: '250px'});
             }
         }
     }, [data]);
 
-    return <div id="chart_div"></div>;
+    return (<div>
+                <div id="chart_div"></div>
+                <div id="table_div"></div>
+            </div>);
 }
