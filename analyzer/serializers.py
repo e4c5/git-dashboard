@@ -32,29 +32,24 @@ class ContribSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class RepositoryCommitSerializer(serializers.ModelSerializer):
-    repository = RepositorySerializer(read_only=True)
+    total = serializers.IntegerField()
 
     class Meta:
-        model = Commit
-        fields = ['repository', 'total']
+        model = Repository
+        fields = ['last_fetch', 'url','lines','contributors','skip','success','total']
 
-    total = serializers.IntegerField()
     
 class AuthorCommitSerializer(serializers.ModelSerializer):
-    author = AuthorSerializer(read_only=True)
+    total = serializers.IntegerField()
 
     class Meta:
-        model = Commit
-        fields = ['author', 'total']
-
-    total = serializers.IntegerField()        
+        model = Author
+        fields = ['name', 'slug', 'total']      
 
 
 class ProjectCommitSerializer(serializers.ModelSerializer):
-    project = ProjectSerializer(read_only=True)
+    total = serializers.IntegerField()
 
     class Meta:
-        model = Commit
-        fields = ['project', 'total']
-
-    total = serializers.IntegerField()
+        model = Project
+        fields = ['name', 'lines', 'total','last_fetch','contributors']

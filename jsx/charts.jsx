@@ -24,15 +24,15 @@ export function Chart() {
      * 'data' state with the results.
      */
     useEffect(() => {
-        fetch('/api/commits/author_commits/')
+        fetch('/api/commits/by_author/')
             .then(response => response.json())
             .then(json => setData({...data, author_commits: json}));
 
-        fetch('/api/commits/repository_commits/')
+        fetch('/api/commits/by_repository/')
             .then(response => response.json())
             .then(json => setData({...data, repo_commits: json}));
 
-        fetch('/api/commits/project_commits/')
+        fetch('/api/commits/by_project/')
             .then(response => response.json())
             .then(json => setData({...data, project_commits: json}));
     }, []);
@@ -67,8 +67,8 @@ export function Chart() {
         dataGoogle.addColumn('number', 'Commits');
         dataGoogle.addColumn('number', 'Total Contributors');
         dataGoogle.addColumn('number', 'Total Lines of code');
-        dataGoogle.addRows(data.map((item) => [item.repository.name, item.total, 
-            item.repository.contributor, item.repository.lines]));
+        dataGoogle.addRows(data.map((item) => [item.name, item.total, 
+            item.contributors, item.lines]));
 
         const chart = new window.google.visualization.PieChart(document.getElementById('repo_chart_div'));
         chart.draw(dataGoogle, options);
@@ -81,7 +81,7 @@ export function Chart() {
         const dataGoogle = new window.google.visualization.DataTable();
         dataGoogle.addColumn('string', 'Author');
         dataGoogle.addColumn('number', 'Commits');
-        dataGoogle.addRows(data.map((item) => [item.author.name, item.total]));
+        dataGoogle.addRows(data.map((item) => [item.name, item.total]));
 
         const chart = new window.google.visualization.PieChart(document.getElementById('author_chart_div'));
         chart.draw(dataGoogle, options);
@@ -96,8 +96,8 @@ export function Chart() {
         dataGoogle.addColumn('number', 'Commits');
         dataGoogle.addColumn('number', 'Active Repositories');
         dataGoogle.addColumn('number', 'Total Lines of code');
-        dataGoogle.addRows(data.map((item) => [item.project.name, item.total, 
-            0, item.project.lines]));
+        dataGoogle.addRows(data.map((item) => [item.name, item.total, 
+            item.contributors, item.lines]));
 
         const chart = new window.google.visualization.PieChart(document.getElementById('project_chart_div'));
         chart.draw(dataGoogle, options);

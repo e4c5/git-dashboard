@@ -30,7 +30,7 @@ class RepositoryAdmin(admin.ModelAdmin):
 
 class CommitAdmin(admin.ModelAdmin):
     list_display = ('hash', 'author', 'repository', 'timestamp')
-
+    search_fields = ('author__name', 'repository__name')
 
 class AuthorAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')  
