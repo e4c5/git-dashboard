@@ -104,8 +104,6 @@ class Command(BaseCommand):
             import traceback
             traceback.print_exc()
             raise e
-            repository.success = False
-            repository.save()
 
     
     @transaction.atomic

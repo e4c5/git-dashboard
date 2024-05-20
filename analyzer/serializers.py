@@ -36,7 +36,8 @@ class RepositoryCommitSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Repository
-        fields = ['last_fetch', 'url','lines','contributors','skip','success','total']
+        fields = ['last_fetch', 'url','lines','contributors','skip',
+                  'success','total','name']
 
     
 class AuthorCommitSerializer(serializers.ModelSerializer):

@@ -46,6 +46,7 @@ class Repository(models.Model):
     contributors = models.IntegerField(default=0)
     skip = models.BooleanField(default=False)
     success = models.BooleanField(default=True)
+    message = models.TextField(default='')
 
     def __str__(self):
         return self.project.name + '/' + self.name
