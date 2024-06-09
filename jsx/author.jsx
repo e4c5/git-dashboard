@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { BrowserRouter as Router, Route, Routes, Link , useParams} from 'react-router-dom';
+
 
 export function AuthorCommitsTable({ data, onAuthorClick }) {
     return (
-        <table>
+        <table className='table table-striped'>
             <thead>
                 <tr>
                     <th>Author</th>
@@ -10,12 +12,12 @@ export function AuthorCommitsTable({ data, onAuthorClick }) {
                 </tr>
             </thead>
             <tbody>
-                {data.map((item) => (
+                {data?.map((item) => (
                     <tr key={item.name}>
                         <td>
-                            <a href="#" onClick={(e) => { e.preventDefault(); onAuthorClick(item.name); }}>
+                            <Link to={`/${item.name}`}>
                                 {item.name}
-                            </a>
+                            </Link>
                         </td>
                         <td>{item.total}</td>
                     </tr>
@@ -26,21 +28,23 @@ export function AuthorCommitsTable({ data, onAuthorClick }) {
 }
 
 
+function AuthorCommits({ match }) {
+    const { name } = useParams();
+
+    // Fetch and display the commits by the author.
+    // This is just a placeholder. Replace it with your actual implementation.
+    return <div>Commits by {name}</div>;
+}
 
 export function AuthorCommitsPage({ data }) {
-    const [selectedAuthor, setSelectedAuthor] = useState(null);
-
-    function handleAuthorClick(name) {
-        console.log(`Fetching commits by ${name}...`);
-        setSelectedAuthor(name);
-    }
-
-    if (selectedAuthor) {
-        // If an author is selected, display the commits by the author.
-        // This is just a placeholder. Replace it with your actual implementation.
-        return <div>Commits by {selectedAuthor}</div>;
-    } else {
-        // If no author is selected, display the list of authors.
-        return <AuthorCommitsTable data={data} onAuthorClick={handleAuthorClick} />;
-    }
+    return (
+        <Router>
+            <Routes>
+                <Route path="/" element = {AuthorCommitsTable({data}) } />
+                <Route path="/:name" element={<AuthorCommits/>} />
+            </Routes>
+        </Router>
+    );
 }
+
+console.log('author 0.01')
