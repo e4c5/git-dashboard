@@ -1,5 +1,8 @@
 from rest_framework import serializers
 from .models import Project, Author, Alias, Repository, Commit, Contrib
+from django.utils import timezone
+from datetime import timedelta
+
 
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
@@ -10,6 +13,7 @@ class AuthorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Author
         fields = '__all__'
+
 
 class AliasSerializer(serializers.ModelSerializer):
     class Meta:
@@ -25,6 +29,21 @@ class CommitSerializer(serializers.ModelSerializer):
     class Meta:
         model = Commit
         fields = '__all__'
+
+
+class AuthorDetailSerializer(serializers.ModelSerializer):
+    commits = serializers.SerializerMethodField()
+
+    def get_commits(self, obj):
+        print('get commits called')
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        commits = obj.commit_set.filter(timestamp__gte=seven_days_ago)
+        return CommitSerializer(commits, many=True).data
+
+    class Meta:
+        model = Author
+        fields = ['name', 'slug', 'commits']
+
 
 class ContribSerializer(serializers.ModelSerializer):
     class Meta:

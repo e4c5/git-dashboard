@@ -48,6 +48,9 @@ class Command(BaseCommand):
 
     
     def import_repo(self, repo_path, timestamp, no_fetch=False):
+        if 'depricated' in repo_path:
+            return
+        
         print(repo_path)
         
         if os.path.exists(repo_path):

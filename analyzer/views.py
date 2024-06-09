@@ -6,7 +6,8 @@ from django.shortcuts import render
 from rest_framework import viewsets, pagination, decorators, response
 
 from .models import Project, Author, Alias, Repository, Commit, Contrib
-from .serializers import ProjectSerializer, AuthorSerializer, AliasSerializer, RepositoryCommitSerializer
+from .serializers import ProjectSerializer, AuthorSerializer, AuthorDetailSerializer
+from .serializers import AliasSerializer, RepositoryCommitSerializer
 from .serializers import RepositorySerializer, CommitSerializer, ContribSerializer, AuthorCommitSerializer
 from .serializers import ProjectCommitSerializer
 
@@ -22,8 +23,11 @@ class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
 
 class AuthorViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Author.objects.all()
-    serializer_class = AuthorSerializer
 
+    def get_serializer_class(self):
+        if self.request.query_params.get('detail'):
+            return AuthorDetailSerializer
+        return AuthorSerializer
 
 class AliasViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Alias.objects.all()
@@ -50,6 +54,8 @@ class CommitViewSet(viewsets.ReadOnlyModelViewSet):
                                 .annotate(total=Count('commit'))\
                                 .order_by('-total')
         serializer = AuthorCommitSerializer(authors, many=True)
+
+        print(authors.query)
         return response.Response(serializer.data)
     
 
