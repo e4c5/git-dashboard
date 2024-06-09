@@ -64,7 +64,7 @@ class AuthorCommitSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Author
-        fields = ['name', 'slug', 'total']      
+        fields = ['id','name', 'slug', 'total']      
 
 
 class ProjectCommitSerializer(serializers.ModelSerializer):
