@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AuthorCommitsPage } from './author.jsx';
 
 export function Chart() {
     const [data, setData] = useState({author_commits: [], repo_commits: [], project_commits: []});
@@ -86,15 +87,13 @@ export function Chart() {
         const chart = new window.google.visualization.PieChart(document.getElementById('author_chart_div'));
         chart.draw(dataGoogle, options);
 
-        const table = new window.google.visualization.Table(document.getElementById('author_table_div'));
-        table.draw(dataGoogle, { showRowNumber: true, width: '100%', height: '600px' });
     }
 
     function drawProjectCommits(data) {
         const dataGoogle = new window.google.visualization.DataTable();
         dataGoogle.addColumn('string', 'Project');
         dataGoogle.addColumn('number', 'Commits');
-        dataGoogle.addColumn('number', 'Active Repositories');
+        dataGoogle.addColumn('number', 'Active Contributors');
         dataGoogle.addColumn('number', 'Total Lines of code');
         dataGoogle.addRows(data.map((item) => [item.name, item.total, 
             item.contributors, item.lines]));
@@ -106,13 +105,16 @@ export function Chart() {
         table.draw(dataGoogle, { showRowNumber: true, width: '100%', height: '600px' });
     }
 
+
     return (
         <>
             <div className='row mt-1'>
                 <h2>Activity by contributor</h2>
             </div>
             <div className='row mt-5'>
-                <div id="author_table_div" className='col-6'></div>
+                <div id="author_table_div" className='col-6'>
+                    <AuthorCommitsPage data={data.author_commits} />
+                </div>
                 <div id="author_chart_div" className='col-6'></div>
             </div>
             <div className='row mt-5'>
