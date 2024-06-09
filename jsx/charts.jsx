@@ -3,6 +3,8 @@ import { AuthorCommitsPage } from './author.jsx';
 
 export function Chart() {
     const [data, setData] = useState({author_commits: [], repo_commits: [], project_commits: []});
+    const [loaded, setLoaded] = useState(false);
+
     const options = {
         width: 600,
         height: 600,
@@ -48,10 +50,9 @@ export function Chart() {
         }
 
         function drawChart() {
+            setLoaded(true)
             if (window.google.visualization) {
-                if(data?.author_commits?.length > 0) {
-                    drawAuthorCommits(data.author_commits);
-                }
+                
                 if(data?.repo_commits?.length > 0) {
                     drawRepositoryCommits(data.repo_commits)
                 }
@@ -78,17 +79,6 @@ export function Chart() {
         table.draw(dataGoogle, { showRowNumber: true, width: '100%', height: '600px' });
     }
 
-    function drawAuthorCommits(data) {
-        const dataGoogle = new window.google.visualization.DataTable();
-        dataGoogle.addColumn('string', 'Author');
-        dataGoogle.addColumn('number', 'Commits');
-        dataGoogle.addRows(data.map((item) => [item.name, item.total]));
-
-        const chart = new window.google.visualization.PieChart(document.getElementById('author_chart_div'));
-        chart.draw(dataGoogle, options);
-
-    }
-
     function drawProjectCommits(data) {
         const dataGoogle = new window.google.visualization.DataTable();
         dataGoogle.addColumn('string', 'Project');
@@ -108,15 +98,8 @@ export function Chart() {
 
     return (
         <>
-            <div className='row mt-1'>
-                <h2>Activity by contributor</h2>
-            </div>
-            <div className='row mt-5'>
-                <div id="author_table_div" className='col-6'>
-                    <AuthorCommitsPage data={data.author_commits} />
-                </div>
-                <div id="author_chart_div" className='col-6'></div>
-            </div>
+            <AuthorCommitsPage data={data.author_commits} loaded={loaded} />
+            
             <div className='row mt-5'>
                 <h2>Activity by repository</h2>
             </div>
