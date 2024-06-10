@@ -9,7 +9,8 @@ from .models import Project, Author, Alias, Repository, Commit, Contrib
 from .serializers import ProjectSerializer, AuthorSerializer, AuthorDetailSerializer
 from .serializers import AliasSerializer, RepositoryCommitSerializer
 from .serializers import RepositorySerializer, CommitSerializer, ContribSerializer, AuthorCommitSerializer
-from .serializers import ProjectCommitSerializer
+from .serializers import ProjectCommitSerializer, ProjectDetailSerializer
+
 
 class CustomCursorPagination(pagination.CursorPagination):
     page_size = 100
@@ -20,6 +21,11 @@ class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
 
+    def get_serializer_class(self):
+        if self.request.query_params.get('detail'):
+            return ProjectDetailSerializer
+        return ProjectSerializer
+        
 
 class AuthorViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Author.objects.all()

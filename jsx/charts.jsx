@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AuthorCommitsPage } from './author.jsx';
+import { Projects } from './project.jsx';
 
 export function Chart() {
     const [data, setData] = useState({author_commits: [], repo_commits: [], project_commits: []});
@@ -29,15 +30,16 @@ export function Chart() {
     useEffect(() => {
         fetch('/api/commits/by_author/')
             .then(response => response.json())
-            .then(json => setData({...data, author_commits: json}));
+            .then(json => setData(prevState => ({...prevState, author_commits: json})));
 
         fetch('/api/commits/by_repository/')
             .then(response => response.json())
-            .then(json => setData({...data, repo_commits: json}));
+            .then(json => setData(prevState => ({...prevState,  repo_commits: json})));
 
         fetch('/api/commits/by_project/')
             .then(response => response.json())
-            .then(json => setData({...data, project_commits: json}));
+            .then(json => setData(prevState => ({...prevState, project_commits: json})));
+
     }, []);
 
     /**
@@ -55,9 +57,6 @@ export function Chart() {
                 
                 if(data?.repo_commits?.length > 0) {
                     drawRepositoryCommits(data.repo_commits)
-                }
-                if(data?.project_commits?.length > 0) {
-                    drawProjectCommits(data.project_commits)
                 }
             }
         }
@@ -79,27 +78,11 @@ export function Chart() {
         table.draw(dataGoogle, { showRowNumber: true, width: '100%', height: '600px' });
     }
 
-    function drawProjectCommits(data) {
-        const dataGoogle = new window.google.visualization.DataTable();
-        dataGoogle.addColumn('string', 'Project');
-        dataGoogle.addColumn('number', 'Commits');
-        dataGoogle.addColumn('number', 'Active Contributors');
-        dataGoogle.addColumn('number', 'Total Lines of code');
-        dataGoogle.addRows(data.map((item) => [item.name, item.total, 
-            item.contributors, item.lines]));
-
-        const chart = new window.google.visualization.PieChart(document.getElementById('project_chart_div'));
-        chart.draw(dataGoogle, options);
-
-        const table = new window.google.visualization.Table(document.getElementById('project_table_div'));
-        table.draw(dataGoogle, { showRowNumber: true, width: '100%', height: '600px' });
-    }
-
-
     return (
         <>
             <AuthorCommitsPage data={data.author_commits} loaded={loaded} />
             
+
             <div className='row mt-5'>
                 <h2>Activity by repository</h2>
             </div>
@@ -107,13 +90,7 @@ export function Chart() {
                 <div id="repo_chart_div" className='col-6'></div>
                 <div id="repo_table_div" className='col-6'></div>
             </div>
-            <div className='row mt-5'>
-                <h2>Activity by Project</h2>
-            </div>
-            <div className='row mt-5 mb-5'>
-                <div id="project_table_div" className='col-6'></div>
-                <div id="project_chart_div" className='col-6'></div>
-            </div>
+            <Projects data={data.project_commits} loaded={loaded} />
         </>)
 }
 
