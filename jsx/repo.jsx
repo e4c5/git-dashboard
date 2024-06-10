@@ -148,7 +148,7 @@ function Contributors({data, loaded, visit}) {
                                         </td>
                                         <td>{repo.contributors}</td>
                                         <td>{repo.commits}</td>
-                                        <td>{repo.lines}</td>
+                                        <td  className="text-end">{repo.lines.toLocaleString()}</td>
                                     </tr>
                                 ))}
                             </tbody>

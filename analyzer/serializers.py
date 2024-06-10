@@ -31,6 +31,15 @@ class RepositorySerializer(serializers.ModelSerializer):
         model = Repository
         fields = '__all__'
 
+
+class RepositoryProjectSerializer(serializers.ModelSerializer):
+    """General purpose Serializer for Repository model to include project info."""
+    project = ProjectSerializer(read_only=True)
+    class Meta:
+        model = Repository
+        fields = '__all__'
+
+
 class CommitSerializer(serializers.ModelSerializer):
     """General purpose Serializer for Commit model."""
     class Meta:
@@ -38,9 +47,17 @@ class CommitSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class CommitDetailSerializer(serializers.ModelSerializer):
+class CommitAuthorSerializer(serializers.ModelSerializer):
     """General purpose Serializer for Commit model includes author details."""
     author = AuthorSerializer(read_only=True)
+    class Meta:
+        model = Commit
+        fields = '__all__'
+
+
+class CommitRepositorySerializer(serializers.ModelSerializer):
+    """General purpose Serializer for Commit model includes repository details."""
+    repository = RepositoryProjectSerializer(read_only=True)
     class Meta:
         model = Commit
         fields = '__all__'
@@ -55,11 +72,12 @@ class AuthorDetailSerializer(serializers.ModelSerializer):
     def get_commits(self, obj):
         seven_days_ago = timezone.now() - timedelta(days=7)
         commits = obj.commit_set.filter(timestamp__gte=seven_days_ago)
-        return CommitSerializer(commits, many=True).data
+        return CommitRepositorySerializer(commits, many=True).data
 
     class Meta:
         model = Author
         fields = ['name', 'slug', 'commits']
+
 
 class ProjectDetailSerializer(serializers.ModelSerializer):
     """Serializer for Project model with commits field.
@@ -90,7 +108,7 @@ class RepositoryDetailSerializer(serializers.ModelSerializer):
         seven_days_ago = timezone.now() - timedelta(days=7)
         commits = Commit.objects.filter( Q(timestamp__gte=seven_days_ago) & Q(repository=obj)
                                          ).order_by('-timestamp')[0:100]
-        return CommitDetailSerializer(commits, many=True).data
+        return CommitAuthorSerializer(commits, many=True).data
         
     class Meta:
         model = Repository

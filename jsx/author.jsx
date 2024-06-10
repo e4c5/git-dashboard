@@ -92,7 +92,7 @@ export function AuthorCommitsTable({ data, loaded, visit }) {
                                             {item.name}
                                         </Link>
                                     </td>
-                                    <td>{item.commits}</td>
+                                    <td className="text-end">{item.commits.toLocaleString()}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -105,7 +105,7 @@ export function AuthorCommitsTable({ data, loaded, visit }) {
 }
 
 
-function AuthorCommits(config) {
+function AuthorCommits({config}) {
     const { id } = useParams();
     const [commits, setCommits] = useState(null);
     const navigate = useNavigate();
@@ -119,9 +119,16 @@ function AuthorCommits(config) {
     }, [id]);
 
     function get_link(commit) {
-        if(config) {
-            return <a href={`${config.url}/projects/${commit.hash}`}>{commit.hash.substring(0,6)}</a>
+        if(config && commit.repository?.project) {
+            return (
+                <a href={`${config['url_pattern']}projects/${commit.repository.project.name}/repos/${commit.repository.name}/commits/${commit.hash}`}
+                    target="_blank">
+                    {commit.hash.substring(0,6)}
+                </a>
+            )
         }
+        return commit.hash.substring(0,6);
+
     }
 
     if (commits) {
@@ -138,6 +145,7 @@ function AuthorCommits(config) {
                     <thead>
                         <tr>
                             <th>Timestamp</th>
+                            <th>Repo</th>
                             <th>Hash</th>
                             <th className="text-center">Message</th>
                         </tr>
@@ -146,7 +154,8 @@ function AuthorCommits(config) {
                         {commits.commits?.map(commit => (
                             <tr key={commit.hash}>
                                 <td className="text-nowrap">{new Date(commit.timestamp).toLocaleString()}</td>
-                                <td>{commit.hash.substring(0,6)}</td>
+                                <td>{ commit.repository.name }</td>
+                                <td>{ get_link(commit) }</td>
                                 <td>{commit.message}</td>
                             </tr>
                         ))}
