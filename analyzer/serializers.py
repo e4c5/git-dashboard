@@ -71,7 +71,7 @@ class AuthorDetailSerializer(serializers.ModelSerializer):
 
     def get_commits(self, obj):
         seven_days_ago = timezone.now() - timedelta(days=7)
-        commits = obj.commit_set.filter(timestamp__gte=seven_days_ago)
+        commits = obj.commit_set.filter(timestamp__gte=seven_days_ago).order_by('-timestamp')[0:100]
         return CommitRepositorySerializer(commits, many=True).data
 
     class Meta:

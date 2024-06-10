@@ -127,7 +127,7 @@ function ProjectCommits() {
                             </tr>
                         </thead>
                         <tbody>
-                            {project.commits.map(commit => (
+                            {project.commits?.map(commit => (
                                 <tr key={commit.hash}>
                                     <td className="text-nowrap">{new Date(commit.timestamp).toLocaleString()}</td>
                                     <td>{commit.hash.substring(0,6)}</td>
