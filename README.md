@@ -14,3 +14,4 @@ To install:
 8. point your browser to http://localhost:8000
 
 
+Typescript? No thank you

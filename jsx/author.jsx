@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Route, Routes, Link , useParams} from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Link , useParams,useNavigate, useLocation} from 'react-router-dom';
 
 const options = {
     width: 600,
@@ -20,18 +20,43 @@ const options = {
 
 
 /**
+ * Renders a list of repositories with their activity details.
+ * 
+ * This component is used instead of directly displaying the <Routes> with in the
+ * Authors component (below). This is because the useLocation hook is needed to trigger
+ * a repaint of the google chart on back button click.
+ * 
+ * @component
+ * @param {Object[]} data - The array of repository data.
+ * @param {boolean} loaded - Indicates whether the data has been loaded.
+ * @returns {JSX.Element} - The rendered component.
+ */
+function Body({data, loaded}) {
+    const [visit, setVisit] = useState(0)
+    const location = useLocation();
+    
+    useEffect(() => { setVisit(v => v + 1) }, [location])
+
+    return(<Routes>
+        <Route path="/" element = {AuthorCommitsTable({data, loaded, visit}) } />
+        <Route path="/:id" element={<AuthorCommits/>} />
+    </Routes>)
+}
+
+
+/**
  * Renders a table displaying the author and their number of commits.
  * @param {Object} props - The component props.
  * @param {Array} props.data - The data containing author information and commit counts.
  * @returns {JSX.Element} - The rendered table component.
  */
-export function AuthorCommitsTable({ data, loaded }) {
+export function AuthorCommitsTable({ data, loaded, visit }) {
     const chartRef = useRef(null);
     useEffect(() => {
-        if (loaded && window?.google?.charts && data) {
+        if (loaded && window?.google?.charts && data && chartRef.current) {
             drawAuthorCommits(data);
         }
-    },[data, loaded]);
+    },[data, loaded, visit]);
 
 
     function drawAuthorCommits(data) {
@@ -83,6 +108,7 @@ export function AuthorCommitsTable({ data, loaded }) {
 function AuthorCommits() {
     const { id } = useParams();
     const [commits, setCommits] = useState(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         if(id) {
@@ -94,20 +120,26 @@ function AuthorCommits() {
 
     if (commits) {
         return (
-            <div>
-                <h3>Activity for {commits.name}</h3>
+            <div className='col-md6  component'>
+                
+                <div className="d-flex justify-content-between align-items-center">
+                    <h3>Activity for {commits.name}</h3>
+                    <button className="btn btn-primary" onClick={() => navigate(-1)}>
+                        <i className="fa fa-arrow-left"></i> Back
+                    </button>
+                </div>
                 <table className='table'>
                     <thead>
                         <tr>
                             <th>Timestamp</th>
                             <th>Hash</th>
-                            <th>Message</th>
+                            <th className="text-center">Message</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {commits.commits.map(commit => (
+                        {commits.commits?.map(commit => (
                             <tr key={commit.hash}>
-                                <td>{new Date(commit.timestamp).toLocaleString()}</td>
+                                <td className="text-nowrap">{new Date(commit.timestamp).toLocaleString()}</td>
                                 <td>{commit.hash.substring(0,6)}</td>
                                 <td>{commit.message}</td>
                             </tr>
@@ -119,13 +151,10 @@ function AuthorCommits() {
     }
 }
 
-export function AuthorCommitsPage({ data, loaded }) {
+export function Authors({ data, loaded }) {
     return (
         <Router>
-            <Routes>
-                <Route path="/" element = {AuthorCommitsTable({data, loaded}) } />
-                <Route path="/:id" element={<AuthorCommits/>} />
-            </Routes>
+            <Body data={data} loaded={loaded} />
         </Router>
     );
 }

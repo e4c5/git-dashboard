@@ -18,11 +18,21 @@ const options = {
     }
 };
 
-function Bada({data, loaded}) {
+/**
+ * Renders a list of repositories with their activity details.
+ * 
+ * This component is used instead of directly displaying the <Routes> with in the
+ * Repositories component. This is because the useLocation hook is needed to trigger
+ * a repaint of the google chart on back button click.
+ * 
+ * @component
+ * @param {Object[]} data - The array of repository data.
+ * @param {boolean} loaded - Indicates whether the data has been loaded.
+ * @returns {JSX.Element} - The rendered component.
+ */
+function Body({data, loaded}) {
     const [visit, setVisit] = useState(0)
     const location = useLocation();
-
-    console.log('location', location)
     
     useEffect(() => { setVisit(v => v + 1) }, [location])
 
@@ -32,7 +42,9 @@ function Bada({data, loaded}) {
     </Routes>)
 }
 
-
+/**
+ * Renders a list of commits for a specific repository.
+ */
 function RepoCommits() {
     const { id } = useParams();
     const [project, setProject] = useState(null);
@@ -64,7 +76,7 @@ function RepoCommits() {
                         </tr>
                     </thead>
                     <tbody>
-                        {project.commits.map(commit => (
+                        {project.commits?.map(commit => (
                             <tr key={commit.hash}>
                                 <td className="text-nowrap">{new Date(commit.timestamp).toLocaleString()}</td>
                                 <td>{commit.hash.substring(0,6)}</td>
@@ -78,11 +90,10 @@ function RepoCommits() {
     }
 }
 
+
 function Contributors({data, loaded, visit}) {
     const chartRef = useRef(null);
-    console.log('visit', visit)
     useEffect(() => {
-        
         if (loaded && window?.google?.charts && data && chartRef.current) {
             drawRepoCommits(data);
         }
@@ -139,7 +150,7 @@ export function Repositories({ data, loaded }) {
 
     return (
         <Router>
-            <Bada data={data} loaded={loaded}/>
+            <Body data={data} loaded={loaded}/>
         </Router>
     );
 }

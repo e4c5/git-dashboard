@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AuthorCommitsPage } from './author.jsx';
+import { Authors } from './author.jsx';
 import { Projects } from './project.jsx';
 import { Repositories } from './repo.jsx';
 
@@ -38,7 +38,7 @@ export function Chart() {
 
     return (
         <>
-            <AuthorCommitsPage data={data.author_commits} loaded={loaded} />
+            <Authors data={data.author_commits} loaded={loaded} />
             <Projects data={data.project_commits} loaded={loaded} />
             <Repositories data={data.repo_commits} loaded={loaded} />
         </>)
