@@ -1,0 +1,1 @@
+GITDB_CONFIG = {"url_pattern": "http://10.201.206.52:7990/"}

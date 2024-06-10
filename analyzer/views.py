@@ -3,6 +3,8 @@ from datetime import timedelta
 from django.db.models import Count, F
 from django.utils import timezone
 from django.shortcuts import render
+from django.http import JsonResponse
+from django.conf import settings
 from rest_framework import viewsets, pagination, decorators, response
 
 from .models import Project, Author, Alias, Repository, Commit, Contrib
@@ -81,6 +83,7 @@ class CommitViewSet(viewsets.ReadOnlyModelViewSet):
                                         .order_by('-commits')
         serializer = RepositoryCommitSerializer(repositories, many=True)
         return response.Response(serializer.data)
+    
 
     @decorators.action(detail=False, methods=['get'])
     def by_project(self, request, *args, **kwargs):
@@ -102,3 +105,6 @@ class ContribViewSet(viewsets.ReadOnlyModelViewSet):
 def home(request):
     print('bada')
     return render(request, 'analyzer/index.html')
+
+def gitdb_config(request):
+    return JsonResponse(settings.GITDB_CONFIG)

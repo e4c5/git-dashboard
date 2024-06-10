@@ -64,10 +64,14 @@ class Command(BaseCommand):
             return
         
         repo_name = os.path.basename(os.path.normpath(repo_path))
+        if repo.remotes:
+            url = repo.remotes.origin.url
+        else:
+            url = repo_path
 
-        repository, _ = Repository.objects.get_or_create(
+        repository, created = Repository.objects.update_or_create(
             name=repo_path.split('/')[-1],
-            defaults = {'name': repo_name, 'url': repo_path, 'project': project},
+            defaults={'name': repo_name, 'url': url, 'project': project},
         )
         if repository.skip:
             return

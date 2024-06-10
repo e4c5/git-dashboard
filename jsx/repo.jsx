@@ -30,7 +30,7 @@ const options = {
  * @param {boolean} loaded - Indicates whether the data has been loaded.
  * @returns {JSX.Element} - The rendered component.
  */
-function Body({data, loaded}) {
+function Body({data, loaded, config}) {
     const [visit, setVisit] = useState(0)
     const location = useLocation();
     
@@ -38,31 +38,43 @@ function Body({data, loaded}) {
 
     return(<Routes>
         <Route path="/" element = {Contributors({data, loaded, visit}) } />
-        <Route path="/:id" element={<RepoCommits/>} />
+        <Route path="/:id" element={<RepoCommits  config={config}/>} />
     </Routes>)
 }
 
 /**
  * Renders a list of commits for a specific repository.
  */
-function RepoCommits() {
+function RepoCommits({config}) {
     const { id } = useParams();
-    const [project, setProject] = useState(null);
+    const [repo, setRepo] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
         if(id) {
             fetch(`/api/repositories/${id}?detail=true`)
                 .then(response => response.json())
-                .then(data => setProject(data));
+                .then(data => setRepo(data));
         }
     }, [id]);
 
-    if (project) {
+    function get_link(commit) {
+        if(config && repo?.project) {
+            return (
+                <a href={`${config['url_pattern']}projects/${repo.project.name}/repos/${repo.name}/commits/${commit.hash}`}
+                    target="_blank">
+                    {commit.hash.substring(0,6)}
+                </a>
+            )
+        }
+        return commit.hash.substring(0,6);
+
+    }
+    if (repo) {
         return (
             <div className='col-md6  component'>
                 <div className="d-flex justify-content-between align-items-center">
-                    <h3>Activity for {project.name}</h3>
+                    <h3>Activity for {repo.name}</h3>
                     <button className="btn btn-primary" onClick={() => navigate(-1)}>
                         <i className="fa fa-arrow-left"></i> Back
                     </button>
@@ -71,15 +83,17 @@ function RepoCommits() {
                     <thead>
                         <tr>
                             <th>Timestamp</th>
+                            <th>Author</th>
                             <th>Hash</th>
                             <th>Message</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {project.commits?.map(commit => (
+                        {repo.commits?.map(commit => (
                             <tr key={commit.hash}>
                                 <td className="text-nowrap">{new Date(commit.timestamp).toLocaleString()}</td>
-                                <td>{commit.hash.substring(0,6)}</td>
+                                <td className="text-nowrap">{commit.author.name}</td>
+                                <td>{ get_link(commit) }</td>
                                 <td>{commit.message}</td>
                             </tr>
                         ))}
@@ -146,11 +160,11 @@ function Contributors({data, loaded, visit}) {
     )
 }
 
-export function Repositories({ data, loaded }) {
+export function Repositories({ data, loaded, config }) {
 
     return (
         <Router>
-            <Body data={data} loaded={loaded}/>
+            <Body data={data} loaded={loaded}  config={config}/>
         </Router>
     );
 }

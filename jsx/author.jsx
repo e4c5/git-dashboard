@@ -31,15 +31,15 @@ const options = {
  * @param {boolean} loaded - Indicates whether the data has been loaded.
  * @returns {JSX.Element} - The rendered component.
  */
-function Body({data, loaded}) {
+function Body({data, loaded, config}) {
     const [visit, setVisit] = useState(0)
     const location = useLocation();
     
     useEffect(() => { setVisit(v => v + 1) }, [location])
 
     return(<Routes>
-        <Route path="/" element = {AuthorCommitsTable({data, loaded, visit}) } />
-        <Route path="/:id" element={<AuthorCommits/>} />
+        <Route path="/" element = {AuthorCommitsTable({data, loaded, visit, config}) } />
+        <Route path="/:id" element={<AuthorCommits config={config}/>} />
     </Routes>)
 }
 
@@ -105,7 +105,7 @@ export function AuthorCommitsTable({ data, loaded, visit }) {
 }
 
 
-function AuthorCommits() {
+function AuthorCommits(config) {
     const { id } = useParams();
     const [commits, setCommits] = useState(null);
     const navigate = useNavigate();
@@ -117,6 +117,12 @@ function AuthorCommits() {
                 .then(data => setCommits(data));
         }
     }, [id]);
+
+    function get_link(commit) {
+        if(config) {
+            return <a href={`${config.url}/projects/${commit.hash}`}>{commit.hash.substring(0,6)}</a>
+        }
+    }
 
     if (commits) {
         return (
@@ -151,10 +157,10 @@ function AuthorCommits() {
     }
 }
 
-export function Authors({ data, loaded }) {
+export function Authors({ data, loaded, config }) {
     return (
         <Router>
-            <Body data={data} loaded={loaded} />
+            <Body data={data} loaded={loaded} config={config}/>
         </Router>
     );
 }
