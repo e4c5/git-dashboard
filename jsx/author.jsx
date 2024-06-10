@@ -35,11 +35,10 @@ export function AuthorCommitsTable({ data, loaded }) {
 
 
     function drawAuthorCommits(data) {
-        console.log('Draw the chart')
         const dataGoogle = new window.google.visualization.DataTable();
         dataGoogle.addColumn('string', 'Author');
         dataGoogle.addColumn('number', 'Commits');
-        dataGoogle.addRows(data.map((item) => [item.name, item.total]));
+        dataGoogle.addRows(data.map((item) => [item.name, item.commits]));
 
         const chart = new window.google.visualization.PieChart(chartRef.current);
         chart.draw(dataGoogle, options);
@@ -52,7 +51,7 @@ export function AuthorCommitsTable({ data, loaded }) {
                 <h2>Activity by contributor</h2>
             </div>
             <div className='row mt-5'>
-                <div id="author_table_div" className='col-6'>
+                <div id="author_table_div" className='col-6  component'>
                     <table className='table table-striped'>
                         <thead>
                             <tr>
@@ -68,7 +67,7 @@ export function AuthorCommitsTable({ data, loaded }) {
                                             {item.name}
                                         </Link>
                                     </td>
-                                    <td>{item.total}</td>
+                                    <td>{item.commits}</td>
                                 </tr>
                             ))}
                         </tbody>

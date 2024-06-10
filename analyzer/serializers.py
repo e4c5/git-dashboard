@@ -60,6 +60,19 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
         fields = ['name', 'lines', 'contributors', 'last_fetch', 'commits']
 
 
+class RepositoryDetailSerializer(serializers.ModelSerializer):
+    commits = serializers.SerializerMethodField()
+
+    def get_commits(self, obj):
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        commits = Commit.objects.filter( Q(timestamp__gte=seven_days_ago) & Q(repository=obj)
+                                         ).order_by('-timestamp')[0:100]
+        return CommitSerializer(commits, many=True).data
+        
+    class Meta:
+        model = Repository
+        fields = ['name', 'lines', 'contributors', 'last_fetch', 'commits']
+
 
 class ContribSerializer(serializers.ModelSerializer):
     class Meta:
@@ -67,25 +80,25 @@ class ContribSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class RepositoryCommitSerializer(serializers.ModelSerializer):
-    total = serializers.IntegerField()
+    commits = serializers.IntegerField()
 
     class Meta:
         model = Repository
-        fields = ['last_fetch', 'url','lines','contributors','skip',
-                  'success','total','name']
+        fields = ['id', 'last_fetch', 'url','lines','contributors','skip',
+                  'success','commits','name']
 
     
 class AuthorCommitSerializer(serializers.ModelSerializer):
-    total = serializers.IntegerField()
+    commits = serializers.IntegerField()
 
     class Meta:
         model = Author
-        fields = ['id','name', 'slug', 'total']      
+        fields = ['id','name', 'slug', 'commits']      
 
 
 class ProjectCommitSerializer(serializers.ModelSerializer):
-    total = serializers.IntegerField()
+    commits = serializers.IntegerField()
 
     class Meta:
         model = Project
-        fields = ['name', 'lines', 'total','last_fetch','contributors']
+        fields = ['id', 'name', 'lines', 'commits','last_fetch','contributors']

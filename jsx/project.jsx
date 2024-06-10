@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Route, Routes, Link , useParams} from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Link , useParams, useNavigate} from 'react-router-dom';
 
 const options = {
     width: 600,
@@ -34,39 +34,46 @@ function Contributors({data, loaded}) {
         dataGoogle.addColumn('number', 'Commits');
         dataGoogle.addColumn('number', 'Active Contributors');
         dataGoogle.addColumn('number', 'Total Lines of code');
-        dataGoogle.addRows(data.map((item) => [item.name, item.total, 
+        dataGoogle.addRows(data.map((item) => [item.name, item.commits, 
             item.contributors, item.lines]));
 
         const chart = new window.google.visualization.PieChart(chartRef.current);
         chart.draw(dataGoogle, options);
     }
 
-    return (<>
-                <div className='row mt-5'>
-                    <h2>Activity by Project</h2>
-                </div>
+    return (
                 <div className='row mt-5 mb-5'>
-                    <div id="project_table_div" className='col-6'>
-                        {data.map(project => (
-                            <div key={project.id} className='row'>
-                                <div className='col-6'>
-                                    <Link to={`/${project.id}`}>{project.name}</Link>
-                                </div>
-                                <div className='col-6'>
-                                    {project.total} commits
-                                </div>
-                            </div>
-                        ))}
+                    <h2>Activity by Project</h2>
+                    <div id="project_table_div" className='col-6  component'>
+                        <table className='table table-striped'>
+                            <thead>
+                                <tr><th>Project</th><th>Contributors</th>
+                                <th>Commits</th><th>Lines</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.map(project => (
+                                    <tr key={project.id}>
+                                        <td>
+                                            <Link to={`/${project.id}`}>{project.name}</Link>
+                                        </td>
+                                        <td className="text-end">{project.contributors.toLocaleString()}</td>
+                                        <td className="text-end">{project.commits.toLocaleString()}</td>
+                                        <td className="text-end">{project.lines.toLocaleString()}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                     <div ref={chartRef} className='col-6'></div>
                 </div>
-            </>
     )
 }
 
 function ProjectCommits() {
     const { id } = useParams();
     const [project, setProject] = useState(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         if(id) {
@@ -78,9 +85,14 @@ function ProjectCommits() {
 
     if (project) {
         return (
-            <div>
-                <h3>Activity for {project.name}</h3>
-                <table className='table'>
+            <div className='col-md6  component'>
+                <div className="d-flex justify-content-between align-items-center">
+                    <h3>Activity for {project.name}</h3>
+                    <button className="btn btn-primary" onClick={() => navigate(-1)}>
+                        <i className="fa fa-arrow-left"></i> Back
+                    </button>
+                </div>
+                <table className='table table-striped'>
                     <thead>
                         <tr>
                             <th>Timestamp</th>
@@ -91,7 +103,7 @@ function ProjectCommits() {
                     <tbody>
                         {project.commits.map(commit => (
                             <tr key={commit.hash}>
-                                <td>{new Date(commit.timestamp).toLocaleString()}</td>
+                                <td className="text-nowrap">{new Date(commit.timestamp).toLocaleString()}</td>
                                 <td>{commit.hash.substring(0,6)}</td>
                                 <td>{commit.message}</td>
                             </tr>

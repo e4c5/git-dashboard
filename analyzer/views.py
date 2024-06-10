@@ -8,7 +8,8 @@ from rest_framework import viewsets, pagination, decorators, response
 from .models import Project, Author, Alias, Repository, Commit, Contrib
 from .serializers import ProjectSerializer, AuthorSerializer, AuthorDetailSerializer
 from .serializers import AliasSerializer, RepositoryCommitSerializer
-from .serializers import RepositorySerializer, CommitSerializer, ContribSerializer, AuthorCommitSerializer
+from .serializers import RepositorySerializer, RepositoryDetailSerializer
+from .serializers import CommitSerializer, ContribSerializer, AuthorCommitSerializer
 from .serializers import ProjectCommitSerializer, ProjectDetailSerializer
 
 
@@ -42,7 +43,11 @@ class AliasViewSet(viewsets.ReadOnlyModelViewSet):
 
 class RepositoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Repository.objects.all()
-    serializer_class = RepositorySerializer
+
+    def get_serializer_class(self):
+        if self.request.query_params.get('detail'):
+            return RepositoryDetailSerializer
+        return RepositorySerializer
 
 
 class CommitViewSet(viewsets.ReadOnlyModelViewSet):
@@ -57,8 +62,8 @@ class CommitViewSet(viewsets.ReadOnlyModelViewSet):
         days = request.query_params.get('days', 7)
         since = timezone.now() - timedelta(days=int(days))
         authors = Author.objects.filter(commit__timestamp__gte=since)\
-                                .annotate(total=Count('commit'))\
-                                .order_by('-total')
+                                .annotate(commits=Count('commit'))\
+                                .order_by('-commits')
         serializer = AuthorCommitSerializer(authors, many=True)
 
         print(authors.query)
@@ -72,8 +77,8 @@ class CommitViewSet(viewsets.ReadOnlyModelViewSet):
         days = request.query_params.get('days', 7)
         since = timezone.now() - timedelta(days=int(days))
         repositories = Repository.objects.filter(commit__timestamp__gte=since)\
-                                        .annotate(total=Count('commit'))\
-                                        .order_by('-total')
+                                        .annotate(commits=Count('commit'))\
+                                        .order_by('-commits')
         serializer = RepositoryCommitSerializer(repositories, many=True)
         return response.Response(serializer.data)
 
@@ -82,8 +87,8 @@ class CommitViewSet(viewsets.ReadOnlyModelViewSet):
         days = request.query_params.get('days', 7)
         since = timezone.now() - timedelta(days=int(days))
         projects = Project.objects.filter(repository__commit__timestamp__gte=since)\
-                                  .annotate(total=Count('repository__commit'))\
-                                  .order_by('-total')
+                                  .annotate(commits=Count('repository__commit'))\
+                                  .order_by('-commits')
         serializer = ProjectCommitSerializer(projects, many=True)
         return response.Response(serializer.data)
 
