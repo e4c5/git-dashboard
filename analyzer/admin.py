@@ -18,7 +18,7 @@ class ProjectListFilter(admin.SimpleListFilter):
 
     def queryset(self, request, queryset):
         if self.value():
-            return queryset.filter(project__id=self.value())
+            return queryset.filter(project__name=self.value())
         else:
             return queryset
         
