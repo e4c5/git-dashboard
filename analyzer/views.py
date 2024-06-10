@@ -106,5 +106,15 @@ def home(request):
     print('bada')
     return render(request, 'analyzer/index.html')
 
+
 def gitdb_config(request):
+    """Returns the configurations needed by the frontend"""
     return JsonResponse(settings.GITDB_CONFIG)
+
+
+def web_hook(request):
+    """Webhook for bitbucket, github or gitlab"""
+    # dump the payload to the console along with the headers
+    print(request.headers)
+    print(request.body)
+    return JsonResponse({'status': 'ok'})
