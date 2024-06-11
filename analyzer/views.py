@@ -5,6 +5,8 @@ from django.utils import timezone
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+
 from rest_framework import viewsets, pagination, decorators, response
 
 from .models import Project, Author, Alias, Repository, Commit, Contrib
@@ -112,6 +114,7 @@ def gitdb_config(request):
     return JsonResponse(settings.GITDB_CONFIG)
 
 
+@csrf_exempt
 def web_hook(request):
     """Webhook for bitbucket, github or gitlab"""
     # dump the payload to the console along with the headers
