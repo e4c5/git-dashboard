@@ -1,10 +1,10 @@
 //npx babel --watch jsx --out-dir analyzer/static/js/ --presets react-app/dev 
 import React, { useState, useEffect } from 'react';
-import * as ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { Chart } from './charts.jsx';
 
 const div = document.getElementById('root')
-const root = ReactDOM.createRoot(div) 
+const root = createRoot(div) 
 
 function Hello() {
     return (<>
