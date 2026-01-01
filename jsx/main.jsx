@@ -1,11 +1,16 @@
 //npx babel --watch jsx --out-dir analyzer/static/js/ --presets react-app/dev 
 import React, { useState, useEffect } from 'react';
-import * as ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { Chart } from './charts.jsx';
 
 const div = document.getElementById('root')
-const root = ReactDOM.createRoot(div) 
+const root = createRoot(div) 
 
+/**
+ * Render the static Git Dashboard header and a quoted statement by Edsger Dijkstra.
+ *
+ * @returns {JSX.Element} A fragment containing an <h1> with "Git Dashboard", a paragraph with the quoted text, and a paragraph with the author attribution.
+ */
 function Hello() {
     return (<>
             <h1>Git Dashboard</h1>
