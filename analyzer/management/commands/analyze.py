@@ -13,7 +13,7 @@ from gitdb.exc import BadName
 
 from django.core.management.base import BaseCommand     
 from django.utils.text import slugify
-from django.db import transaction
+from django.db import transaction, models
 
 from analyzer.importer import count_lines_by_author,get_last_modified_time
 from analyzer.models import Author, Repository, Commit, Contrib, Project
@@ -25,6 +25,7 @@ class Command(BaseCommand):
         parser.add_argument('--timestamp', type=str, required=False, help='Only check for commits that are newer than the given timestamp')
         parser.add_argument('--all', action='store_true', help='Process all projects and repositories recursively')
         parser.add_argument('--no-fetch', action='store_true', help='Dont fetch the repository before analyzing it')
+        parser.add_argument('--skip-blame', action='store_true', help='Skip line counting (much faster, only processes commits)')
     
     def handle(self, *args, **options):
         repo_path = options['location']
@@ -34,29 +35,33 @@ class Command(BaseCommand):
             for project in os.listdir(repo_path):
                 if os.path.isdir(os.path.join(repo_path, project)) and not project.startswith('.'):
                     if os.path.isdir(os.path.join(repo_path, project, '.git')):
-                        self.import_repo(repo_path, timestamp)
+                        self.import_repo(repo_path, timestamp, options['no_fetch'], options['skip_blame'])
                     else:   
-                        self.recurse(os.path.join(repo_path, project), timestamp, options['no_fetch'])
+                        self.recurse(os.path.join(repo_path, project), timestamp, options['no_fetch'], options['skip_blame'])
         else:
-            self.import_repo(repo_path, timestamp, options['no_fetch'])
+            self.import_repo(repo_path, timestamp, options['no_fetch'], options['skip_blame'])
 
 
-    def recurse(self, repo_path, timestamp, no_fetch=False):
+    def recurse(self, repo_path, timestamp, no_fetch=False, skip_blame=False):
         for repo in os.listdir(repo_path):
-            self.import_repo(os.path.join(repo_path, repo), timestamp, no_fetch)
+            self.import_repo(os.path.join(repo_path, repo), timestamp, no_fetch, skip_blame)
 
 
     
-    def import_repo(self, repo_path, timestamp, no_fetch=False):
+    def import_repo(self, repo_path, timestamp, no_fetch=False, skip_blame=False):
         if 'depricated' in repo_path:
             return
         
-        print(repo_path)
+        print(f"Analyzing: {repo_path}")
         
-        if os.path.exists(repo_path):
+        if not os.path.exists(repo_path):
+            print(f'  ⚠ Repository not found: {repo_path}')
+            return
+            
+        try:
             repo = Repo(repo_path)
-        else:
-            print('Repository not found')
+        except Exception as e:
+            print(f'  ✗ Not a valid git repository: {e}')
             return
 
         project = self.get_project(repo_path)
@@ -88,23 +93,32 @@ class Command(BaseCommand):
                 timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
 
             self.log_commits(timestamp, repo, repository)
-            total = self.line_counts(repo, repository)
+            
+            if skip_blame:
+                total = 0
+                print('    Skipping line count (--skip-blame)')
+            else:
+                total = self.line_counts(repo, repository)
+                
             timestamp = get_last_modified_time(repo_path)
 
-            project.lines += total
-            project.contributors = Contrib.objects.filter(repository__project=project).count()
+            # Recalculate project stats from database (don't accumulate)
+            project.lines = Contrib.objects.filter(repository__project=project).aggregate(total=models.Sum('count'))['total'] or 0
+            project.contributors = Contrib.objects.filter(repository__project=project).values('author').distinct().count()
             if project.last_fetch is None or project.last_fetch < timestamp:
                 project.last_fetch = timestamp
             project.save()
 
             repository.lines = total
-            repository.contributors = Contrib.objects.filter(repository=repository).count()
+            repository.contributors = Contrib.objects.filter(repository=repository).values('author').distinct().count()
             repository.last_fetch = timestamp
             repository.success = True
             repository.save()
+            print(f'  ✓ Success: {total} lines, {repository.contributors} contributors')
         except (GitCommandError, BadName, ValueError) as ge:
-            print(ge)
+            print(f"  ✗ Error analyzing repository {repo_path}: {ge}")
             repository.success = False
+            repository.message = str(ge)[:500]  # Store first 500 chars of error
             repository.save()
         except Exception as e:
             print(e)
@@ -113,32 +127,37 @@ class Command(BaseCommand):
             raise e
 
     
-    @transaction.atomic
     def log_commits(self, timestamp, repo, repository):
         """Log commits to the database.
-        The last 10,000 commits across all branches are processed
+        The last 100,000 commits across all branches are processed in batches.
         Args: timestamp: datetime of the last commit previously seen
                 repo: git.Repo object
                 repository: Repository object (database model)
         Returns: datetime of the last commit processed
         """
-
+        batch_size = 1000
+        commit_count = 0
+        
         for commit in repo.iter_commits(all=True, max_count=100000):
             if timestamp is None or commit.committed_datetime > timestamp:
                 author = Author.get_or_create(commit.author.name)
 
-                commit, _ = Commit.objects.get_or_create(
-                    hash=commit.hexsha,
-                    defaults = {'hash': commit.hexsha, 'author': author, 
-                                'timestamp': commit.committed_datetime, 
-                                'repository': repository, 'message': commit.message}
-                )
+                with transaction.atomic():
+                    commit, _ = Commit.objects.get_or_create(
+                        hash=commit.hexsha,
+                        defaults = {'hash': commit.hexsha, 'author': author, 
+                                    'timestamp': commit.committed_datetime, 
+                                    'repository': repository, 'message': commit.message}
+                    )
+                
+                commit_count += 1
+                if commit_count % batch_size == 0:
+                    print(f'    Processed {commit_count} commits...')
             else:
                 break
             
 
 
-    @transaction.atomic
     def line_counts(self, repo, repository):
         """Count lines of code by author in the given repository
         
@@ -151,11 +170,13 @@ class Command(BaseCommand):
 
         for commiter, count in lines_by_author.items():
             author = Author.get_or_create(commiter)
-            Contrib.objects.get_or_create(
-                author=author,repository = repository,
-                defaults = {'author': author, 'count': count, 'repository': repository}
+            Contrib.objects.update_or_create(
+                author=author, 
+                repository=repository,
+                defaults={'count': count}
             )
             total += count
+        
         return total
 
     def get_project(self, repo_path):

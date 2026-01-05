@@ -53,11 +53,16 @@ python manage.py analyze /path/to/projects --all
 # Skip fetching updates (faster)
 python manage.py analyze /path/to/repo --no-fetch
 
+# Skip line counting (much faster, lower memory - only processes commits)
+python manage.py analyze /path/to/projects --all --skip-blame
+
 # Filter by timestamp
 python manage.py analyze /path/to/repo --timestamp "2024-01-01 00:00:00"
 ```
 
 **Important**: The `analyze` command expects repos organized as `/base-path/project-name/repo-name/.git`. The parent directory name becomes the `Project` name.
+
+**Memory considerations**: Line counting uses `git blame` on every file, which is very memory-intensive. For large repos or many repos, use `--skip-blame` to only process commit history. This can prevent OOM (Out of Memory) kills (exit code 137).
 
 ### Other Management Commands
 - `cleanup` - resets all Project/Repository stats (lines, contributors, timestamps)
