@@ -104,12 +104,22 @@ class CommitViewSet(viewsets.ReadOnlyModelViewSet):
         This endpoint identifies 'active committers' as those with commits in the
         lookback period (default 90 days) and shows their weekly commit activity.
         
+        Returns both per-author breakdown and aggregate (team total) data.
+        
         Query params:
         - projects: REQUIRED - comma-separated project names (e.g., 'BM,RMS,PHAR')
         - days: lookback period to determine active committers (default: 90)
         - weeks: number of weeks to display (default: 24)
         
-        Returns: [{week: 'YYYY-W##', author: 'name', commits: count}, ...]
+        Returns: {
+            by_author: [{week: 'YYYY-W##', author: 'name', commits: count}, ...],
+            aggregate: [{week: 'YYYY-W##', total_commits: count}, ...],
+            metadata: {
+                projects: [...],
+                active_authors_count: int,
+                active_authors: [...]
+            }
+        }
         
         Example:
             GET /api/commits/active_per_week/?projects=BM,RMS,PHAR
@@ -146,6 +156,8 @@ class CommitViewSet(viewsets.ReadOnlyModelViewSet):
             commit__timestamp__gte=active_cutoff
         ).distinct()
         
+        active_author_names = list(active_authors.values_list('name', flat=True).order_by('name'))
+        
         # Get commits for the chart period
         chart_cutoff = timezone.now() - timedelta(weeks=weeks_back)
         commits = Commit.objects.filter(
@@ -158,18 +170,57 @@ class CommitViewSet(viewsets.ReadOnlyModelViewSet):
             commits=Count('id')
         ).order_by('week', 'author__name')
         
-        # Format as list of dicts
-        data = []
+        # Format per-author data with date ranges
+        by_author_data = []
         for commit in commits:
-            week_str = commit['week'].strftime('%Y-W%V')
-            data.append({
-                'week': week_str,
+            week_date = commit['week']
+            # Format as "Jan 1 - Jan 7, 2024"
+            week_end = week_date + timedelta(days=6)
+            week_label = f"{week_date.strftime('%b %d')} - {week_end.strftime('%b %d, %Y')}"
+            
+            by_author_data.append({
+                'week': week_label,
+                'week_start': week_date.isoformat(),
                 'author': commit['author__name'],
                 'commits': commit['commits']
             })
         
-        print(f"[active_per_week] Found {len(data)} week-author combinations from {active_authors.count()} active authors")
-        return response.Response(data)
+        # Calculate aggregate data (total commits per week)
+        aggregate_commits = Commit.objects.filter(
+            repository__project__name__in=project_list,
+            author__in=active_authors,
+            timestamp__gte=chart_cutoff
+        ).annotate(
+            week=TruncWeek('timestamp')
+        ).values('week').annotate(
+            total_commits=Count('id')
+        ).order_by('week')
+        
+        aggregate_data = []
+        for commit in aggregate_commits:
+            week_date = commit['week']
+            week_end = week_date + timedelta(days=6)
+            week_label = f"{week_date.strftime('%b %d')} - {week_end.strftime('%b %d, %Y')}"
+            
+            aggregate_data.append({
+                'week': week_label,
+                'week_start': week_date.isoformat(),
+                'total_commits': commit['total_commits']
+            })
+        
+        print(f"[active_per_week] Found {active_authors.count()} active authors with {len(by_author_data)} author-week combinations")
+        
+        return response.Response({
+            'by_author': by_author_data,
+            'aggregate': aggregate_data,
+            'metadata': {
+                'projects': list(project_list),
+                'active_authors_count': active_authors.count(),
+                'active_authors': active_author_names,
+                'active_days': active_days,
+                'weeks_back': weeks_back
+            }
+        })
 
 
 class ContribViewSet(viewsets.ReadOnlyModelViewSet):
