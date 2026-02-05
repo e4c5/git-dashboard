@@ -6,14 +6,16 @@ it is possible to analyze all repositories recursively.
 In case some projects or repositories do not need analysis their skip flag can
 be set to True.
 """
+import gc
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from git import GitCommandError, Repo
 from gitdb.exc import BadName
 
 from django.core.management.base import BaseCommand     
 from django.utils.text import slugify
 from django.db import transaction, models
+from django.utils import timezone
 
 from analyzer.importer import count_lines_by_author,get_last_modified_time
 from analyzer.models import Author, Repository, Commit, Contrib, Project
@@ -26,29 +28,33 @@ class Command(BaseCommand):
         parser.add_argument('--all', action='store_true', help='Process all projects and repositories recursively')
         parser.add_argument('--no-fetch', action='store_true', help='Dont fetch the repository before analyzing it')
         parser.add_argument('--skip-blame', action='store_true', help='Skip line counting (much faster, only processes commits)')
+        parser.add_argument('--skip-fetch-hours', type=int, default=24, help='Skip fetching if last fetch was within N hours (default: 24)')
+        parser.add_argument('--skip-analysis-hours', type=int, default=24, help='Skip analysis if last analyzed within N hours (default: 24, 0 to disable)')
     
     def handle(self, *args, **options):
         repo_path = options['location']
         timestamp = options['timestamp']
+        skip_fetch_hours = options['skip_fetch_hours']
+        skip_analysis_hours = options['skip_analysis_hours']
         
         if options['all']:
             for project in os.listdir(repo_path):
                 if os.path.isdir(os.path.join(repo_path, project)) and not project.startswith('.'):
                     if os.path.isdir(os.path.join(repo_path, project, '.git')):
-                        self.import_repo(repo_path, timestamp, options['no_fetch'], options['skip_blame'])
+                        self.import_repo(repo_path, timestamp, options['no_fetch'], options['skip_blame'], skip_fetch_hours, skip_analysis_hours)
                     else:   
-                        self.recurse(os.path.join(repo_path, project), timestamp, options['no_fetch'], options['skip_blame'])
+                        self.recurse(os.path.join(repo_path, project), timestamp, options['no_fetch'], options['skip_blame'], skip_fetch_hours, skip_analysis_hours)
         else:
-            self.import_repo(repo_path, timestamp, options['no_fetch'], options['skip_blame'])
+            self.import_repo(repo_path, timestamp, options['no_fetch'], options['skip_blame'], skip_fetch_hours, skip_analysis_hours)
 
 
-    def recurse(self, repo_path, timestamp, no_fetch=False, skip_blame=False):
+    def recurse(self, repo_path, timestamp, no_fetch=False, skip_blame=False, skip_fetch_hours=24, skip_analysis_hours=24):
         for repo in os.listdir(repo_path):
-            self.import_repo(os.path.join(repo_path, repo), timestamp, no_fetch, skip_blame)
+            self.import_repo(os.path.join(repo_path, repo), timestamp, no_fetch, skip_blame, skip_fetch_hours, skip_analysis_hours)
 
 
     
-    def import_repo(self, repo_path, timestamp, no_fetch=False, skip_blame=False):
+    def import_repo(self, repo_path, timestamp, no_fetch=False, skip_blame=False, skip_fetch_hours=24, skip_analysis_hours=24):
         if 'depricated' in repo_path:
             return
         
@@ -80,11 +86,36 @@ class Command(BaseCommand):
         )
         if repository.skip:
             return
-
+            
+        # Skip reprocessing if analyzed within configured hours (0 to disable)
+        if skip_analysis_hours > 0 and repository.last_fetch and not created:
+            time_since_analysis = timezone.now() - repository.last_fetch
+            if time_since_analysis < timedelta(hours=skip_analysis_hours):
+                hours_ago = int(time_since_analysis.total_seconds() // 3600)
+                mins_ago = int((time_since_analysis.total_seconds() % 3600) // 60)
+                print(f'  ⏭ Skipping (analyzed {hours_ago}h {mins_ago}m ago)')
+                return
+        
         try:
             if not no_fetch:
-                # fetch all the changes from remote to local
-                repo.remotes.origin.fetch()
+                should_fetch = True
+                
+                # Skip fetch if the last commit in the repo is recent enough
+                if skip_fetch_hours > 0:
+                    try:
+                        last_commit_time = get_last_modified_time(repo_path)
+                        if last_commit_time:
+                            time_since_commit = timezone.now() - last_commit_time
+                            if time_since_commit < timedelta(hours=skip_fetch_hours):
+                                hours_ago = int(time_since_commit.total_seconds() // 3600)
+                                print(f'    Skipping fetch (last commit {hours_ago}h ago)')
+                                should_fetch = False
+                    except:
+                        pass  # If we can't determine last commit time, fetch anyway
+                
+                if should_fetch:
+                    print(f'    Fetching updates...')
+                    repo.remotes.origin.fetch()
             
 
             if timestamp is None:
@@ -98,6 +129,15 @@ class Command(BaseCommand):
                 total = 0
                 print('    Skipping line count (--skip-blame)')
             else:
+                # Estimate file count to warn about memory usage
+                try:
+                    branch = repo.active_branch.name if not repo.head.is_detached else 'HEAD'
+                    file_count = sum(1 for item in repo.tree(branch).traverse() if item.type == 'blob')
+                    if file_count > 5000:
+                        print(f'    ⚠ Warning: {file_count} files detected. This may cause OOM. Consider using --skip-blame')
+                except:
+                    pass
+                    
                 total = self.line_counts(repo, repository)
                 
             timestamp = get_last_modified_time(repo_path)
@@ -111,10 +151,15 @@ class Command(BaseCommand):
 
             repository.lines = total
             repository.contributors = Contrib.objects.filter(repository=repository).values('author').distinct().count()
-            repository.last_fetch = timestamp
+            repository.last_fetch = timezone.now()  # Set to current time, not last commit time
             repository.success = True
             repository.save()
             print(f'  ✓ Success: {total} lines, {repository.contributors} contributors')
+            
+            # Force garbage collection after each repo to prevent memory buildup
+            del repo
+            gc.collect()
+            
         except (GitCommandError, BadName, ValueError) as ge:
             print(f"  ✗ Error analyzing repository {repo_path}: {ge}")
             repository.success = False

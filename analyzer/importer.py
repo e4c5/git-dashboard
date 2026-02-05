@@ -1,5 +1,6 @@
 from git import Repo
 from git.exc import GitCommandError
+import gc
 import os
 
 
@@ -62,25 +63,27 @@ def count_lines_by_author(repo, branch=None):
     try:
         tree = repo.tree(branch)
         for item in tree.traverse():
-            if item.type == 'blob':  # A file, not a directory
-                file_count += 1
-                try:
-                    # Process blame output line by line instead of loading all at once
-                    blame_output = repo.git.blame('--line-porcelain', branch, '--', item.path)
-                    for line in blame_output.split('\n'):
-                        if line.startswith('author '):
-                            author = line[6:]
-                            lines_by_author[author] = lines_by_author.get(author, 0) + 1
+            if item.type != 'blob':  # Skip directories
+                continue
+                
+            file_count += 1
+            try:
+                # Use splitlines() which is more memory efficient than split('\n')
+                # Process incrementally without storing the full string
+                for line in repo.git.blame('--line-porcelain', branch, '--', item.path).splitlines():
+                    if line.startswith('author '):
+                        author = line[6:]
+                        lines_by_author[author] = lines_by_author.get(author, 0) + 1
+                
+                if file_count % 100 == 0:
+                    print(f"    Processed {file_count} files...")
+                    # Force garbage collection every 100 files to prevent memory buildup
+                    gc.collect()
                     
-                    # Clear blame output from memory
-                    del blame_output
-                    
-                    if file_count % 100 == 0:
-                        print(f"    Processed {file_count} files...")
-                        
-                except GitCommandError:
-                    # Skip files that can't be blamed (binary, etc.)
-                    continue
+            except GitCommandError:
+                # Skip files that can't be blamed (binary, etc.)
+                continue
+                
     except (GitCommandError, ValueError) as e:
         print(f"Warning: Could not analyze branch '{branch}': {e}")
     
