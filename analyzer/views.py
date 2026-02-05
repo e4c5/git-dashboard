@@ -1,6 +1,6 @@
 from datetime import timedelta
-
-from django.db.models import Count, F
+from django.db.models import Count, F, Q
+from django.db.models.functions import TruncWeek
 from django.utils import timezone
 from django.shortcuts import render
 from django.http import JsonResponse
@@ -96,6 +96,80 @@ class CommitViewSet(viewsets.ReadOnlyModelViewSet):
                                   .order_by('-commits')
         serializer = ProjectCommitSerializer(projects, many=True)
         return response.Response(serializer.data)
+
+    @decorators.action(detail=False, methods=['get'])
+    def active_per_week(self, request, *args, **kwargs):
+        """Returns commits per active committer per week across specified projects.
+        
+        This endpoint identifies 'active committers' as those with commits in the
+        lookback period (default 90 days) and shows their weekly commit activity.
+        
+        Query params:
+        - projects: REQUIRED - comma-separated project names (e.g., 'BM,RMS,PHAR')
+        - days: lookback period to determine active committers (default: 90)
+        - weeks: number of weeks to display (default: 24)
+        
+        Returns: [{week: 'YYYY-W##', author: 'name', commits: count}, ...]
+        
+        Example:
+            GET /api/commits/active_per_week/?projects=BM,RMS,PHAR
+            GET /api/commits/active_per_week/?projects=RMS&days=180&weeks=52
+        """
+        # Get and validate projects parameter
+        projects_param = request.query_params.get('projects')
+        if not projects_param:
+            return response.Response(
+                {'error': 'projects parameter is required. Example: ?projects=BM,RMS,PHAR'},
+                status=400
+            )
+        
+        project_list = [p.strip() for p in projects_param.split(',')]
+        
+        # Verify projects exist in database
+        existing_projects = Project.objects.filter(name__in=project_list).values_list('name', flat=True)
+        missing_projects = set(project_list) - set(existing_projects)
+        if missing_projects:
+            return response.Response(
+                {'error': f'Projects not found: {list(missing_projects)}. Available: {list(existing_projects)}'},
+                status=404
+            )
+        
+        active_days = int(request.query_params.get('days', 90))
+        weeks_back = int(request.query_params.get('weeks', 24))
+        
+        print(f"[active_per_week] Analyzing projects: {project_list}, active_days={active_days}, weeks_back={weeks_back}")
+        
+        # Determine active committers (anyone with commits in last N days)
+        active_cutoff = timezone.now() - timedelta(days=active_days)
+        active_authors = Author.objects.filter(
+            commit__repository__project__name__in=project_list,
+            commit__timestamp__gte=active_cutoff
+        ).distinct()
+        
+        # Get commits for the chart period
+        chart_cutoff = timezone.now() - timedelta(weeks=weeks_back)
+        commits = Commit.objects.filter(
+            repository__project__name__in=project_list,
+            author__in=active_authors,
+            timestamp__gte=chart_cutoff
+        ).annotate(
+            week=TruncWeek('timestamp')
+        ).values('week', 'author__name').annotate(
+            commits=Count('id')
+        ).order_by('week', 'author__name')
+        
+        # Format as list of dicts
+        data = []
+        for commit in commits:
+            week_str = commit['week'].strftime('%Y-W%V')
+            data.append({
+                'week': week_str,
+                'author': commit['author__name'],
+                'commits': commit['commits']
+            })
+        
+        print(f"[active_per_week] Found {len(data)} week-author combinations from {active_authors.count()} active authors")
+        return response.Response(data)
 
 
 class ContribViewSet(viewsets.ReadOnlyModelViewSet):
