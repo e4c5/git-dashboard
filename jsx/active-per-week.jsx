@@ -99,7 +99,7 @@ export function ActivePerWeek({ loaded }) {
                 title: `Commits per Active Committer per Week (${selectedProjects.join(', ')}) - ${apiData.metadata.active_authors_count} Active Engineers`,
                 curveType: 'function',
                 legend: { position: 'bottom', maxLines: 5 },
-                pointSize: 4,
+                pointSize: 5,
                 hAxis: {
                     title: 'Week',
                     slantedText: true,
@@ -108,8 +108,8 @@ export function ActivePerWeek({ loaded }) {
                 vAxis: {
                     title: 'Number of Commits',
                 },
-                width: 1200,
-                height: 500,
+                width: '100%',
+                height: 800,
             };
 
             const chart = new google.visualization.LineChart(
@@ -156,8 +156,8 @@ export function ActivePerWeek({ loaded }) {
                 vAxis: {
                     title: 'Total Commits',
                 },
-                width: 1200,
-                height: 500,
+                width: '100%',
+                height: 800,
                 colors: ['#1f77b4'],
             };
 
@@ -194,7 +194,7 @@ export function ActivePerWeek({ loaded }) {
     }
 
     return (
-        <div style={{ marginTop: '0', padding: '30px', backgroundColor: '#fff', minHeight: '100vh' }}>
+        <div style={{ margin: '0', padding: '30px', backgroundColor: '#fff', minHeight: '100vh', width: '100%', boxSizing: 'border-box' }}>
             <h2 style={{ marginTop: '0', marginBottom: '30px' }}>Commits per Active Committer per Week</h2>
 
             {/* Controls Section */}
@@ -342,7 +342,7 @@ export function ActivePerWeek({ loaded }) {
 
             {/* Chart */}
             {!loading && !error && selectedProjects.length > 0 && (
-                <div id="active-per-week-chart" style={{ width: '100%', minHeight: '700px' }}></div>
+                <div id="active-per-week-chart" style={{ width: '100%', minHeight: '800px' }}></div>
             )}
 
             {!loading && selectedProjects.length === 0 && (
