@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Authors } from './author.jsx';
 import { Projects } from './project.jsx';
 import { Repositories } from './repo.jsx';
+import { ActivePerWeek } from './active-per-week.jsx';
 
 export function Chart() {
     const [data, setData] = useState({author_commits: [], repo_commits: [], project_commits: []});
@@ -43,6 +44,7 @@ export function Chart() {
 
     return (
         <>
+            <ActivePerWeek loaded={loaded} />
             <Authors data={data.author_commits} loaded={loaded} config={config}/>
             <Projects data={data.project_commits} loaded={loaded} />
             <Repositories data={data.repo_commits} loaded={loaded} config={config} />
