@@ -28,7 +28,16 @@ export function ActivePerWeek({ loaded }) {
 
     // Fetch chart data when parameters change
     useEffect(() => {
-        if (!loaded || selectedProjects.length === 0) return;
+        if (!loaded) return;
+        
+        if (selectedProjects.length === 0) {
+            setApiData({ by_author: [], aggregate: [], metadata: {} });
+            setError(null);
+            setLoading(false);
+            return;
+        }
+
+        let isMounted = true;
 
         setLoading(true);
         setError(null);
@@ -47,15 +56,25 @@ export function ActivePerWeek({ loaded }) {
                 return response.json();
             })
             .then(json => {
-                setApiData(json);
-                setError(null);
+                if (isMounted) {
+                    setApiData(json);
+                    setError(null);
+                }
             })
             .catch(err => {
-                console.error('Error fetching active_per_week:', err);
-                setError(err.message);
-                setApiData({ by_author: [], aggregate: [], metadata: {} });
+                if (isMounted) {
+                    console.error('Error fetching active_per_week:', err);
+                    setError(err.message);
+                    setApiData({ by_author: [], aggregate: [], metadata: {} });
+                }
             })
-            .finally(() => setLoading(false));
+            .finally(() => {
+                if (isMounted) setLoading(false);
+            });
+
+        return () => {
+            isMounted = false;
+        };
     }, [selectedProjects, activeDays, weeksDisplay, loaded]);
 
     // Draw per-author chart
@@ -93,7 +112,7 @@ export function ActivePerWeek({ loaded }) {
                 tableData.push(row);
             });
 
-            const dataTable = new google.visualization.arrayToDataTable(tableData);
+            const dataTable = google.visualization.arrayToDataTable(tableData);
 
             const options = {
                 title: `Commits per Active Committer per Week (${selectedProjects.join(', ')}) - ${apiData.metadata.active_authors_count} Active Engineers`,
@@ -141,7 +160,7 @@ export function ActivePerWeek({ loaded }) {
                 tableData.push([item.week, item.total_commits]);
             });
 
-            const dataTable = new google.visualization.arrayToDataTable(tableData);
+            const dataTable = google.visualization.arrayToDataTable(tableData);
 
             const options = {
                 title: `Team Total Commits per Week (${selectedProjects.join(', ')}) - ${apiData.metadata.active_authors_count} Active Engineers`,

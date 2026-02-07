@@ -133,7 +133,7 @@ class CommitViewSet(viewsets.ReadOnlyModelViewSet):
                 status=400
             )
         
-        project_list = [p.strip() for p in projects_param.split(',')]
+        project_list = [p.strip() for p in projects_param.split(',') if p.strip()]
         
         # Verify projects exist in database
         existing_projects = Project.objects.filter(name__in=project_list).values_list('name', flat=True)
@@ -144,8 +144,15 @@ class CommitViewSet(viewsets.ReadOnlyModelViewSet):
                 status=404
             )
         
-        active_days = int(request.query_params.get('days', 90))
-        weeks_back = int(request.query_params.get('weeks', 24))
+        # Validate integer parameters
+        try:
+            active_days = int(request.query_params.get('days', 90))
+            weeks_back = int(request.query_params.get('weeks', 24))
+        except ValueError as e:
+            return response.Response(
+                {'error': 'days and weeks parameters must be integers'},
+                status=400
+            )
         
         print(f"[active_per_week] Analyzing projects: {project_list}, active_days={active_days}, weeks_back={weeks_back}")
         

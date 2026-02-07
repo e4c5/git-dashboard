@@ -91,10 +91,13 @@ def count_lines_by_author(repo, branch=None):
 
 
 def get_last_modified_time(repo_path):
+    from django.utils import timezone
     repo = Repo(repo_path)
     commits = repo.iter_commits(all=True, max_count=1)
     try:
-        return next(commits).committed_datetime
+        dt = next(commits).committed_datetime
+        # Make naive datetime timezone-aware for Django compatibility
+        return timezone.make_aware(dt) if dt.tzinfo is None else dt
     except StopIteration:
         return None
     
